@@ -128,25 +128,25 @@ _FORK_REPO = "hermes-agent"
 
 
 def get_installed_version() -> Optional[str]:
-    """Get the release tag if running from a release (e.g., 0.10.0-avons.1.0).
-
-    Checks:
-    1. HERMES_HOME/.hermes-release file (explicitly set during install)
-    2. git describe --tags if current commit matches a tag
+    """Get the installed release version from .update_check cache.
+    
+    Returns the stored installed_version if available, otherwise
+    tries git describe --tags --exact-match as fallback.
     """
     hermes_home = get_hermes_home()
-
-    # Check for explicit release file
-    release_file = hermes_home / ".hermes-release"
-    if release_file.exists():
+    cache_file = hermes_home / ".update_check"
+    
+    # Check cache first
+    if cache_file.exists():
         try:
-            version = release_file.read_text().strip()
+            cached = json.loads(cache_file.read_text())
+            version = cached.get("installed_version")
             if version:
                 return version
         except Exception:
             pass
-
-    # Check git describe
+    
+    # Fallback: check git describe
     repo_dir = hermes_home / "hermes-agent"
     if not (repo_dir / ".git").exists():
         repo_dir = Path(__file__).parent.parent.resolve()
