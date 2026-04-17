@@ -1,9 +1,37 @@
-/venv/
-/_pycache/
-*.pyc*
-__pycache__/
+# Virtual environments
 .venv/
+.venv
+venv/
+env/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.hypothesis/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+!.hermes_agent.egg-info/
+
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python compiled
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Env files
 .env
 .env.local
 .env.development.local
@@ -12,49 +40,55 @@ __pycache__/
 .env.development
 .env.test
 export*
-__pycache__/model_tools.cpython-310.pyc
-__pycache__/web_tools.cpython-310.pyc
+
+# Logs & data
 logs/
 data/
-.pytest_cache/
 tmp/
 temp_vision_images/
-hermes-*/*
-examples/
+wandb/
+testlogs/
+
+# Test data
 tests/quick_test_dataset.jsonl
 tests/sample_dataset.jsonl
-run_datagen_kimik2-thinking.sh
-run_datagen_megascience_glm4-6.sh
-run_datagen_sonnet.sh
-source-data/*
-run_datagen_megascience_glm4-6.sh
-data/*
+
+# Datagen scripts
+run_datagen_*
+source-data/
+
+# Node
 node_modules/
+
+# Browser
 browser-use/
 agent-browser/
+
 # Private keys
 *.ppk
 *.pem
 privvy*
-images/
-__pycache__/
-hermes_agent.egg-info/
-wandb/
-testlogs
 
-# CLI config (may contain sensitive SSH paths)
+# Images
+images/
+
+# CLI config
 cli-config.yaml
 
-# Skills Hub state (lives in ~/.hermes/skills/.hub/ at runtime, but just in case)
+# Skills Hub
 skills/.hub/
 ignored/
+
+# Git
 .worktrees/
+
+# Environments benchmarks
 environments/benchmarks/evals/
 
-# Web UI build output
+# Web UI
 hermes_cli/web_dist/
 
-# Release script temp files
+# Release temp
 .release_notes.md
 mini-swe-agent/
 
@@ -62,3 +96,11 @@ mini-swe-agent/
 .direnv/
 result
 website/static/api/skills-index.json
+
+# Ruff/mypy
+.mypy_cache/
+.ruff_cache/
+
+# Project specific
+hermes-*/*
+examples/
