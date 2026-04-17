@@ -896,7 +896,13 @@ def _get_exa_client():
 # ─── Exa Search & Extract Helpers ─────────────────────────────────────────────
 
 def _exa_search(query: str, limit: int = 10) -> dict:
-    """Search using the Exa SDK and return results as a dict."""
+    """Search using the Exa SDK and return results as a dict.
+    
+    Returns results with:
+    - score: relevance score (0-1)
+    - published_date: publication date for recency sorting
+    - highlights: key context snippets for synthesis
+    """
     from tools.interrupt import is_interrupted
     if is_interrupted():
         return {"error": "Interrupted", "success": False}
@@ -905,6 +911,7 @@ def _exa_search(query: str, limit: int = 10) -> dict:
     response = _get_exa_client().search(
         query,
         num_results=limit,
+        type="auto",  # Neural search for better semantic matching
         contents={
             "highlights": True,
         },
@@ -913,11 +920,21 @@ def _exa_search(query: str, limit: int = 10) -> dict:
     web_results = []
     for i, result in enumerate(response.results or []):
         highlights = result.highlights or []
+        # Get published date if available
+        published = None
+        if hasattr(result, 'published_date') and result.published_date:
+            published = result.published_date.isoformat() if hasattr(result.published_date, 'isoformat') else str(result.published_date)
+        elif hasattr(result, 'publishedDate') and result.publishedDate:
+            published = result.publishedDate
+            
         web_results.append({
             "url": result.url or "",
             "title": result.title or "",
             "description": " ".join(highlights) if highlights else "",
             "position": i + 1,
+            "score": round(result.score, 4) if hasattr(result, 'score') and result.score else None,
+            "published_date": published,
+            "highlights": highlights,  # Full highlights array for richer context
         })
 
     return {"success": True, "data": {"web": web_results}}
@@ -1036,7 +1053,7 @@ def web_search_tool(query: str, limit: int = 5) -> str:
     Search the web for information using available search API backend.
 
     This function provides a generic interface for web search that can work
-    with multiple backends (Parallel or Firecrawl).
+    with multiple backends (Parallel, Firecrawl, Tavily, or Exa).
 
     Note: This function returns search result metadata only (URLs, titles, descriptions).
     Use web_extract_tool to get full content from specific URLs.
