@@ -111,6 +111,22 @@ def display_hermes_home() -> str:
         return str(home)
 
 
+def display_hermes_dotenv_path() -> str:
+    """Return the user-friendly display string for the `.env` file path.
+
+    Respects ``$HERMES_HOME`` environment variable.
+
+    Examples::
+
+        default:  ``~/.hermes/.env``
+        profile:  ``~/.hermes/profiles/coder/.env``
+        custom:   ``/opt/hermes-custom/.env``
+
+    Use this in **user-facing** messages instead of hardcoding ``~/.hermes/.env``.
+    """
+    return f"{display_hermes_home()}/.env"
+
+
 def get_subprocess_home() -> str | None:
     """Return a per-profile HOME directory for subprocesses, or None.
 
@@ -235,7 +251,6 @@ def get_config_path() -> Path:
 def get_skills_dir() -> Path:
     """Return the path to the skills directory under HERMES_HOME."""
     return get_hermes_home() / "skills"
-
 
 
 def get_env_path() -> Path:

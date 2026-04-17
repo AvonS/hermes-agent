@@ -709,6 +709,33 @@ class AIAgent:
         else:
             self.api_mode = "chat_completions"
 
+        # OpenCode Zen/Go: Detect API mode for Anthropic models and strip /v1
+        # from base URL so the Anthropic SDK constructs the correct path
+        detected_provider = self.provider
+        if not detected_provider and "/" in self.model:
+            detected_provider = self.model.split("/")[0]
+        
+        if detected_provider in ("opencode-zen", "opencode-go", "opencode"):
+            try:
+                from hermes_cli.models import opencode_model_api_mode
+                detected_mode = opencode_model_api_mode(detected_provider, self.model.split("/")[-1] if "/" in self.model else self.model)
+                if detected_mode == "anthropic_messages":
+                    self.api_mode = "anthropic_messages"
+            except Exception:
+                pass
+
+        # Prune /v1 from OpenCode Zen/Go base URL when in Anthropic mode.
+        # The Anthropic SDK appends /v1/messages, so keeping /v1 in the base
+        # causes a 404 (hitting /v1/v1/messages).
+        if (
+            self.api_mode == "anthropic_messages"
+            and detected_provider in ("opencode-zen", "opencode-go", "opencode")
+            and isinstance(self.base_url, str)
+            and self.base_url.rstrip("/").endswith("/v1")
+        ):
+            import re as _re
+            self.base_url = _re.sub(r"/v1/?$", "", self.base_url.rstrip("/"))
+
         try:
             from hermes_cli.model_normalize import (
                 _AGGREGATOR_PROVIDERS,
@@ -1688,7 +1715,7 @@ class AIAgent:
         # tests) can't reintroduce the double-/v1 404 bug.
         if (
             api_mode == "anthropic_messages"
-            and new_provider in ("opencode-zen", "opencode-go")
+            and new_provider in ("opencode-zen", "opencode-go", "opencode")
             and isinstance(base_url, str)
             and base_url
         ):

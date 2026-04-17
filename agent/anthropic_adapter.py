@@ -262,6 +262,8 @@ def _is_third_party_anthropic_endpoint(base_url: str | None) -> bool:
     normalized = normalized.rstrip("/").lower()
     if "anthropic.com" in normalized:
         return False  # Direct Anthropic API — OAuth applies
+    if "opencode.ai" in normalized:
+        return False  # OpenCode Zen is an Anthropic-compliant proxy
     return True  # Any other endpoint is a third-party proxy
 
 

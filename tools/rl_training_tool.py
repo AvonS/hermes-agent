@@ -730,11 +730,12 @@ async def rl_start_training() -> str:
             "error": "No environment selected. Use rl_select_environment(name) first.",
         }, indent=2)
     
-    # Check API keys
-    if not os.getenv("TINKER_API_KEY"):
-        return json.dumps({
-            "error": "TINKER_API_KEY not set. Add it to ~/.hermes/.env",
-        }, indent=2)
+     # Check API keys
+     if not os.getenv("TINKER_API_KEY"):
+         from hermes_constants import display_hermes_dotenv_path
+         return json.dumps({
+             "error": f"TINKER_API_KEY not set. Add it to {display_hermes_dotenv_path()}",
+         }, indent=2)
     
     # Find environment file
     env_info = None

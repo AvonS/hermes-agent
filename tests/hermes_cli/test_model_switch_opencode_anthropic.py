@@ -191,6 +191,19 @@ class TestOpenCodeZenV1Strip:
         assert result.api_mode == "codex_responses"
         assert result.base_url == "https://opencode.ai/zen/v1"
 
+    def test_switch_to_claude_strips_v1_with_opencode_alias(self):
+        """OpenCode Zen alias ('opencode') also strips /v1 for Claude."""
+        result = _run_opencode_switch(
+            raw_input="claude-sonnet-4-5",
+            current_provider="opencode",
+            current_model="gemini-3-flash",
+            current_base_url="https://opencode.ai/zen/v1",
+        )
+
+        assert result.success
+        assert result.api_mode == "anthropic_messages"
+        assert result.base_url == "https://opencode.ai/zen"
+
 
 class TestAgentSwitchModelDefenseInDepth:
     """run_agent.AIAgent.switch_model() also strips /v1 as defense-in-depth."""
@@ -249,4 +262,46 @@ class TestAgentSwitchModelDefenseInDepth:
         assert captured.get("base_url") == "https://opencode.ai/zen/go", (
             f"agent.switch_model did not strip /v1; passed {captured.get('base_url')} "
             "to build_anthropic_client"
+        )
+
+    def test_agent_switch_model_strips_v1_for_opencode_alias(self):
+        """`new_provider='opencode'` gets the same /v1 strip protection."""
+        from run_agent import AIAgent
+
+        agent = AIAgent.__new__(AIAgent)
+        agent.model = "gemini-3-flash"
+        agent.provider = "opencode"
+        agent.base_url = "https://opencode.ai/zen/v1"
+        agent.api_key = "sk-opencode-fake"
+        agent.api_mode = "chat_completions"
+        agent._client_kwargs = {}
+
+        captured = {}
+
+        class _Sentinel(Exception):
+            pass
+
+        def _raise_after_capture(api_key, base_url):
+            captured["api_key"] = api_key
+            captured["base_url"] = base_url
+            raise _Sentinel("strip verified")
+
+        with patch(
+            "agent.anthropic_adapter.build_anthropic_client",
+            side_effect=_raise_after_capture,
+        ), patch("agent.anthropic_adapter.resolve_anthropic_token", return_value=""), patch(
+            "agent.anthropic_adapter._is_oauth_token", return_value=False
+        ):
+            with pytest.raises(_Sentinel):
+                agent.switch_model(
+                    new_model="claude-sonnet-4-5",
+                    new_provider="opencode",
+                    api_key="sk-opencode-fake",
+                    base_url="https://opencode.ai/zen/v1",
+                    api_mode="anthropic_messages",
+                )
+
+        assert captured.get("base_url") == "https://opencode.ai/zen", (
+            f"agent.switch_model did not strip /v1 for alias provider; passed "
+            f"{captured.get('base_url')} to build_anthropic_client"
         )
