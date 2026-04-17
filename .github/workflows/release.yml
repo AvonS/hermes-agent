@@ -30,6 +30,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure Git identity
+        run: |
+          git config --global user.email "avonslabs@github.com"
+          git config --global user.name "AvonS Fork Release"
+
       - name: Get upstream version
         id: version
         run: |
