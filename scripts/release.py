@@ -53,6 +53,8 @@ AUTHOR_MAP = {
     "126368201+vilkasdev@users.noreply.github.com": "vilkasdev",
     "137614867+cutepawss@users.noreply.github.com": "cutepawss",
     "96793918+memosr@users.noreply.github.com": "memosr",
+    "milkoor@users.noreply.github.com": "milkoor",
+    "xuerui911@gmail.com": "Fatty911",
     "131039422+SHL0MS@users.noreply.github.com": "SHL0MS",
     "77628552+raulvidis@users.noreply.github.com": "raulvidis",
     "145567217+Aum08Desai@users.noreply.github.com": "Aum08Desai",
@@ -69,6 +71,7 @@ AUTHOR_MAP = {
     "241404605+MestreY0d4-Uninter@users.noreply.github.com": "MestreY0d4-Uninter",
     "109555139+davetist@users.noreply.github.com": "davetist",
     # contributors (manual mapping from git names)
+    "ahmedsherif95@gmail.com": "asheriif",
     "dmayhem93@gmail.com": "dmahan93",
     "samherring99@gmail.com": "samherring99",
     "desaiaum08@gmail.com": "Aum08Desai",
@@ -79,6 +82,7 @@ AUTHOR_MAP = {
     "xaydinoktay@gmail.com": "aydnOktay",
     "abdullahfarukozden@gmail.com": "Farukest",
     "lovre.pesut@gmail.com": "rovle",
+    "kevinskysunny@gmail.com": "kevinskysunny",
     "hakanerten02@hotmail.com": "teyrebaz33",
     "ruzzgarcn@gmail.com": "Ruzzgar",
     "alireza78.crypto@gmail.com": "alireza78a",
@@ -191,6 +195,9 @@ AUTHOR_MAP = {
     "cola-runner@users.noreply.github.com": "cola-runner",
     "ygd58@users.noreply.github.com": "ygd58",
     "vominh1919@users.noreply.github.com": "vominh1919",
+    "trevmanthony@gmail.com": "trevthefoolish",
+    "ziliangpeng@users.noreply.github.com": "ziliangpeng",
+    "centripetal-star@users.noreply.github.com": "centripetal-star",
     "LeonSGP43@users.noreply.github.com": "LeonSGP43",
     "Lubrsy706@users.noreply.github.com": "Lubrsy706",
     "niyant@spicefi.xyz": "spniyant",
@@ -223,6 +230,8 @@ AUTHOR_MAP = {
     "zzn+pa@zzn.im": "xinbenlv",
     "zaynjarvis@gmail.com": "ZaynJarvis",
     "zhiheng.liu@bytedance.com": "ZaynJarvis",
+    "mbelleau@Michels-MacBook-Pro.local": "malaiwah",
+    "dhandhalyabhavik@gmail.com": "v1k22",
 }
 
 
