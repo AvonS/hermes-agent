@@ -1,133 +1,281 @@
-# Hermes Agent AvonS-Fork- Installation Guide
+# Hermes Agent - Installation Guide
 
-## Quick Start
+This guide covers installing Hermes Agent from source (after cloning the repository). For the quick one-line installer, see [README.md](README.md).
 
-#Create HERMES HOME and export
+---
 
-## add to .zhrc or equivalent
-export HERMES_HOME=~/Work/hermes
+## Table of Contents
 
+- [Fork-Specific Quick Start (AvonS)](#fork-specific-quick-start-avons)
+- [Standard Installation](#standard-installation)
+- [Prerequisites](#prerequisites)
+- [Clone and Setup](#clone-and-setup)
+- [Install with Optional Extras](#install-with-optional-extras)
+- [Adding Additional Packages After Install](#adding-additional-packages-after-install)
+- [Verify Installation](#verify-installation)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Fork-Specific Quick Start (AvonS)
+
+For the **AvonS/hermes-agent** fork with `HERMES_HOME` support:
+
+### 1. Set HERMES_HOME
+
+Add to your `~/.zshrc` or `~/.bashrc`:
+```bash
+export HERMES_HOME=~/Work/Explore/hermes
+```
+
+### 2. Clone and Install
 
 ```bash
-# 1. Clone and checkout release
-CD $HERMES_HOME
+cd $HERMES_HOME
 git clone https://github.com/AvonS/hermes-agent.git
 cd hermes-agent
-git checkout v0.1.0
+git checkout dev  # or release
 
-# 2. Create virtual environment with uv
+# Create virtual environment
 uv venv
 
-# 3. Activate and install dependencies
+# Activate and install
 source .venv/bin/activate
-pip install -e .
+uv pip install -e ".[messaging]"  # Include Telegram/Discord/Slack support
 
-# 4. Run setup
+# Run setup
 hermes setup
 ```
 
-## Requirements
+### Shell Alias (Optional)
 
-- Python 3.11+
-- [uv](https://github.com/astral-sh/uv) (fast Python package manager)
-- API keys in `$HERMES_HOME/.env` (see `.env.example`)
+Add to your shell config:
+```bash
+alias hermes='cd $HERMES_HOME/hermes-agent && source .venv/bin/activate && hermes'
+```
 
-## Installation
+---
 
-### 1. Clone the Release
+## Standard Installation
+
+### Prerequisites
+
+- Python 3.11 or higher
+- `uv` (recommended) or `pip`
+- Git
+
+Install `uv`:
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### Clone and Setup
 
 ```bash
-git clone https://github.com/AvonS/hermes-agent.git
+git clone https://github.com/NousResearch/hermes-agent.git
 cd hermes-agent
-git checkout v0.1.0
+uv venv venv --python 3.11
+source venv/bin/activate
 ```
 
-### 2. Create Virtual Environment
+---
 
-Using **uv** (recommended - faster):
+## Install with Optional Extras
+
+Hermes uses Python's "optional extras" system. The base install provides core functionality; extras add specific features.
+
+### Core Only (Minimal)
+
+Basic CLI without messaging platforms, voice, or advanced terminal backends:
 
 ```bash
-uv venv
+uv pip install -e .
 ```
 
-Or with pip:
+**Includes**: OpenAI/Anthropic clients, web tools, file tools, basic terminal, skills system.
+
+### Messaging Platforms
+
+**Required for Telegram, Discord, Slack, WhatsApp gateway:**
 
 ```bash
-python3 -m venv .venv
+uv pip install -e ".[messaging]"
 ```
 
-### 3. Activate & Install
+**What's included**:
+- `python-telegram-bot` — Telegram bot support
+- `discord.py` — Discord bot support
+- `slack-bolt`, `slack-sdk` — Slack integration
+- `aiohttp` — Async HTTP for webhooks
+- `qrcode` — QR code generation for WhatsApp pairing
+
+### All Features
+
+Install everything except platform-specific exclusions:
 
 ```bash
-# Activate the environment
-source .venv/bin/activate
-
-# Install in editable mode
-pip install -e .
+uv pip install -e ".[all]"
 ```
 
-### 4. Configure
+**Note**: This excludes `voice` extra on macOS (due to wheel-only dependencies incompatible with Homebrew builds). Install voice separately if needed.
+
+---
+
+## Adding Additional Packages After Install
+
+If you installed a minimal set and later need more features, you can add extras without reinstalling everything.
+
+### Add Messaging Support (for Telegram/Discord/Slack)
 
 ```bash
-# Run interactive setup
-hermes setup
+# If you previously only installed core
+uv pip install -e ".[messaging]"
 ```
 
-Or manually:
+**Verify Telegram works**:
 ```bash
-cp $HERMES_HOME/.env.example ~/.hermes/.env
-# Edit ~/.hermes/.env with your API keys
+hermes gateway status
+# Should show: telegram: connected
 ```
 
-## Shell Alias (Optional)
-
-Add to your `~/.bashrc` or `~/.zshrc`:
+### Add Voice Support (Speech-to-Text)
 
 ```bash
-# Hermes Agent alias
-alias hermes='cd /path/to/hermes-agent && source .venv/bin/activate && hermes'
+uv pip install -e ".[voice]"
 ```
 
-Replace `/path/to/hermes-agent` with your actual path.
+**Note**: Voice support requires `faster-whisper` which has compiled dependencies. If you get wheel build errors on macOS, voice features may not be available.
 
-Then reload:
-```bash
-source ~/.bashrc  # or ~/.zshrc
-```
-
-Now just type `hermes` to start!
-
-## Running
+### Add Cron Scheduling
 
 ```bash
-# CLI mode
-hermes
-
-# Gateway mode (Telegram, Slack, etc.)
-hermes gateway run
-
-# Background mode
-hermes gateway run --background
+uv pip install -e ".[cron]"
 ```
 
-## Updating
+### Add Cloud Terminal Backends
 
 ```bash
-git fetch origin
-git checkout v0.1.0  # or newer release tag
-pip install -e .      # reinstall if needed
+# Modal serverless
+uv pip install -e ".[modal]"
+
+# Daytona development environments
+uv pip install -e ".[daytona]"
 ```
+
+### Add Multiple Extras
+
+```bash
+# Example: messaging + cron + voice
+uv pip install -e ".[messaging,cron,voice]"
+
+# For development work
+uv pip install -e ".[messaging,cron,dev]"
+```
+
+### List Available Extras
+
+See all available extras in `pyproject.toml` under `[project.optional-dependencies]`:
+
+```bash
+grep -A 1 "^\[project.optional-dependencies\]" pyproject.toml
+```
+
+Common extras:
+| Extra | Features |
+|-------|----------|
+| `messaging` | Telegram, Discord, Slack, WhatsApp |
+| `cron` | Scheduled task automation |
+| `voice` | Speech-to-text transcription |
+| `modal` | Modal.com serverless backend |
+| `daytona` | Daytona dev environment backend |
+| `dev` | pytest, debug tools |
+| `matrix` | Matrix chat protocol (Linux only) |
+| `homeassistant` | Home Assistant integration |
+| `mcp` | MCP (Model Context Protocol) servers |
+| `termux` | Android/Termux curated set |
+
+---
+
+## Verify Installation
+
+```bash
+# Check CLI works
+hermes --version
+
+# Run diagnostics
+hermes doctor
+
+# Test Telegram (if configured)
+hermes gateway status
+```
+
+---
 
 ## Troubleshooting
 
+### "No adapter available for telegram"
+
+**Cause**: `python-telegram-bot` not installed (missing `[messaging]` extra)
+
+**Fix**:
+```bash
+uv pip install -e ".[messaging]"
+hermes gateway restart
+```
+
+### "HTTPXRequest.__init__() got an unexpected keyword argument 'httpx_kwargs'"
+
+**Cause**: Version mismatch between `python-telegram-bot` and Hermes code
+
+**Fix**: Install the `[messaging]` extra which pins the correct version:
+```bash
+uv pip install -e ".[messaging]"
+```
+
+Or if using a fork/older version, disable fallback IPs:
+```bash
+export HERMES_TELEGRAM_DISABLE_FALLBACK_IPS=true
+```
+
+### "Module not found" when running tools
+
+**Cause**: Missing optional extra for that toolset
+
+**Fix**: Check `pyproject.toml` for the relevant extra and install it:
+```bash
+uv pip install -e ".[EXTRA_NAME]"
+```
+
 ### "command not found: hermes"
+
 - Ensure `.venv/bin` is in your PATH, or use the alias above
-- Run `pip install -e .` again in the activated environment
+- Run `uv pip install -e .` again in the activated environment
 
 ### API key errors
+
 - Check `~/.hermes/.env` contains your keys
 - Required: `OPENROUTER_API_KEY` or similar
 
 ### Port already in use
+
 - Kill existing process: `pkill -f hermes`
 - Or run on different port: `hermes gateway run --port 8080`
+
+---
+
+## Next Steps
+
+After installation:
+
+```bash
+# Configure your LLM provider
+hermes model
+
+# Set up Telegram/Discord/etc (if you installed [messaging])
+hermes gateway setup
+
+# Start chatting
+hermes
+```
+
+See [full documentation](https://hermes-agent.nousresearch.com/docs/) for more.

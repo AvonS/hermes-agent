@@ -46,6 +46,8 @@ source ~/.bashrc    # reload shell (or: source ~/.zshrc)
 hermes              # start chatting!
 ```
 
+📋 **[Detailed install options →](INSTALL.md)** — Installing from source, optional extras (messaging platforms, voice, cron), adding packages after install.
+
 ---
 
 ## Getting Started
@@ -91,6 +93,7 @@ All documentation lives at **[hermes-agent.nousresearch.com/docs](https://hermes
 | Section | What's Covered |
 |---------|---------------|
 | [Quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart) | Install → setup → first conversation in 2 minutes |
+| [Installation](INSTALL.md) | Source install, optional extras, adding packages post-install |
 | [CLI Usage](https://hermes-agent.nousresearch.com/docs/user-guide/cli) | Commands, keybindings, personalities, sessions |
 | [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) | Config file, providers, models, all options |
 | [Messaging Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging) | Telegram, Discord, Slack, WhatsApp, Signal, Home Assistant |
@@ -152,6 +155,8 @@ source venv/bin/activate
 uv pip install -e ".[all,dev]"
 python -m pytest tests/ -q
 ```
+
+See [INSTALL.md](INSTALL.md) for details on installing specific extras (e.g., just `[messaging]` for Telegram/Discord testing).
 
 > **RL Training (optional):** To work on the RL/Tinker-Atropos integration:
 > ```bash
