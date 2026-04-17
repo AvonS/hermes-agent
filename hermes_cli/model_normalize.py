@@ -362,7 +362,16 @@ def normalize_model_for_provider(model_input: str, target_provider: str) -> str:
     if provider == "opencode-zen":
         bare = _strip_matching_provider_prefix(name, provider)
         if "/" in bare:
-            return bare
+            bare = bare.split("/", 1)[1]
+        
+        # Force strict short names for Claude on OpenCode Zen
+        if bare.lower().startswith("claude-3-5-sonnet"):
+            return "claude-3-5-sonnet"
+        if bare.lower().startswith("claude-3-5-haiku"):
+            return "claude-3-5-haiku"
+        if bare.lower().startswith("claude-3-opus"):
+            return "claude-3-opus"
+            
         if bare.lower().startswith("claude-"):
             return _dots_to_hyphens(bare)
         return bare

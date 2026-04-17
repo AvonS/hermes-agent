@@ -247,7 +247,9 @@ _PROVIDER_MODELS: dict[str, list[str]] = {
         "kimi-k2.5",
         "kimi-k2-thinking",
         "kimi-k2",
-        "qwen3-coder",
+        "qwen3-coder-32b",
+        "qwen3-coder-7b",
+        "qwen3-coder-1.5b",
         "big-pickle",
     ],
     "opencode-go": [
@@ -714,10 +716,10 @@ def _openrouter_model_is_free(pricing: Any) -> bool:
     if not isinstance(pricing, dict):
         return False
     try:
-        return (
-            float(pricing.get("prompt", "0")) == 0
-            and float(pricing.get("completion", "0")) == 0
-        )
+        # Check both prompt and completion are effectively zero
+        prompt = float(pricing.get("prompt", "0"))
+        completion = float(pricing.get("completion", "0"))
+        return prompt == 0 and completion == 0
     except (TypeError, ValueError):
         return False
 
@@ -1102,6 +1104,26 @@ def curated_models_for_provider(
     if normalized == "openrouter":
         return fetch_openrouter_models(force_refresh=force_refresh)
 
+    if normalized == "opencode-zen":
+        try:
+            from hermes_cli.auth import resolve_api_key_provider_credentials
+            creds = resolve_api_key_provider_credentials("opencode-zen")
+            if creds and creds.get("api_key"):
+                base_url = creds.get("base_url") or "https://opencode.ai/zen/v1"
+                pricing = fetch_models_with_pricing(
+                    api_key=creds["api_key"],
+                    base_url=base_url,
+                    force_refresh=force_refresh,
+                )
+                if pricing:
+                    # Sort models to show free ones first, then alphabetical
+                    items = list(pricing.items())
+                    items.sort(key=lambda x: (not _openrouter_model_is_free(x[1]), x[0]))
+                    return [(m, "free" if _openrouter_model_is_free(p) else "") for m, p in items]
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).debug("OpenCode Zen live discovery failed: %s", e)
+
     # Try live API first (Codex, Nous, etc. all support /models)
     live = provider_model_ids(normalized)
     if live:
@@ -1376,6 +1398,20 @@ def provider_model_ids(
         from hermes_cli.codex_models import get_codex_model_ids
 
         return get_codex_model_ids()
+    if normalized == "opencode-zen":
+        # OpenCode Zen supports /v1/models for live discovery
+        try:
+            from hermes_cli.auth import resolve_api_key_provider_credentials
+            creds = resolve_api_key_provider_credentials("opencode-zen")
+            if creds and creds.get("api_key"):
+                live = fetch_api_models(
+                    creds["api_key"],
+                    creds.get("base_url") or "https://opencode.ai/zen/v1",
+                )
+                if live:
+                    return live
+        except Exception:
+            pass
     if normalized in {"copilot", "copilot-acp"}:
         try:
             live = _fetch_github_models(_resolve_copilot_catalog_api_key())
