@@ -709,6 +709,23 @@ class AIAgent:
         else:
             self.api_mode = "chat_completions"
 
+        # OpenCode Zen/Go: Detect API mode for Anthropic models and strip /v1
+        # from base URL so the Anthropic SDK constructs the correct path
+        detected_provider = self.provider
+        if not detected_provider and "/" in self.model:
+            detected_provider = self.model.split("/")[0]
+        if detected_provider in ("opencode-zen", "opencode-go") and self.api_mode == "chat_completions":
+            try:
+                from hermes_cli.models import opencode_model_api_mode
+                detected_mode = opencode_model_api_mode(detected_provider, self.model.split("/")[-1] if "/" in self.model else self.model)
+                if detected_mode == "anthropic_messages":
+                    self.api_mode = "anthropic_messages"
+                    # Strip /v1 from base URL for Anthropic messages
+                    import re as _re
+                    self.base_url = _re.sub(r"/v1/?$", "", self.base_url.rstrip("/"))
+            except Exception:
+                pass
+
         try:
             from hermes_cli.model_normalize import (
                 _AGGREGATOR_PROVIDERS,
