@@ -57,3 +57,57 @@ This avoids "fork drift" and makes upstream sync clear.
 - Add AGENTS.md with fork directory structure
 - Add note to avoid hardcoding ~/.hermes in code
 - Update INSTALL.md with fork setup instructions
+
+---
+
+## Workflow: Feature → Dev → Release
+
+### Branch Model
+```
+feature/<name>     # feature branch from dev
+       ↓
+dev              # development branch (default)
+       ↓
+release          # production branch (tagged releases)
+```
+
+### Process
+1. **Create feature branch** from `dev`:
+   ```bash
+   git checkout -b feature/my-feature dev
+   ```
+
+2. **Work** on feature, commit regularly
+
+3. **Merge to dev**:
+   ```bash
+   git checkout dev
+   git merge feature/my-feature
+   ```
+
+4. **Test on dev**, verify changes
+
+5. **Merge dev → release**:
+   ```bash
+   git checkout release
+   git merge dev
+   ```
+
+6. **Create release** (run GitHub Actions workflow):
+   - Go to: Actions → Fork Release → Run workflow
+   - Choose "patch" or "minor"
+   - Creates tag: `0.10.0-avons.1.0`
+
+### Rollback
+```bash
+# Revert merge commit on dev
+git revert -m 1 <merge-commit>
+```
+
+### Sync with Upstream
+```bash
+git fetch upstream main
+git checkout dev
+git merge upstream/main
+# Fix any conflicts, test, then merge to release
+```
