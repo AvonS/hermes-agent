@@ -1,0 +1,103 @@
+name: Fork Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+        default: patch
+      notes:
+        description: 'Release notes (optional)'
+        required: false
+        default: ''
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get upstream version
+        id: version
+        run: |
+          # Read upstream version from pyproject.toml
+          UPSTREAM=$(grep '^version = "' pyproject.toml | sed 's/version = "\(.*\)"/\1/' | tr -d ' ')
+          echo "upstream_version=$UPSTREAM" >> $GITHUB_OUTPUT
+          echo "Upstream version: $UPSTREAM"
+
+      - name: Calculate fork version
+        id: fork-version
+        run: |
+          UPSTREAM=${{ steps.version.outputs.upstream_version }}
+          
+          # Get last fork tag
+          LAST_TAG=$(git tag --list '*-avons.*' | sort -V | tail -1 || echo "")
+          
+          if [ -z "$LAST_TAG" ]; then
+            # First release
+            FORK_MINOR=1
+            FORK_PATCH=0
+          else
+            # Parse last tag: e.g., 0.10.0-avons.1.0
+            LAST_MINOR=$(echo $LAST_TAG | sed 's/.*-avons.\([0-9]*\).*/\1/')
+            LAST_PATCH=$(echo $LAST_TAG | sed 's/.*-avons.[0-9]*.\([0-9]*\)/\1/')
+            
+            BUMP_TYPE="${{ github.event.inputs.version_type }}"
+            
+            if [ "$BUMP_TYPE" == "minor" ]; then
+              FORK_MINOR=$((LAST_MINOR + 1))
+              FORK_PATCH=0
+            else
+              # patch
+              FORK_MINOR=$LAST_MINOR
+              FORK_PATCH=$((LAST_PATCH + 1))
+            fi
+          fi
+          
+          FORK_VERSION="${UPSTREAM}-avons.${FORK_MINOR}.${FORK_PATCH}"
+          echo "fork_version=$FORK_VERSION" >> $GITHUB_OUTPUT
+          echo "Fork version: $FORK_VERSION"
+
+      - name: Create release tag
+        id: tag
+        run: |
+          VERSION=${{ steps.fork-version.outputs.fork_version }}
+          git tag -a "$VERSION" -m "Fork release $VERSION"
+          git push origin "$VERSION"
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ steps.tag.outputs.tag }}
+          NOTES="${{ github.event.inputs.notes }}"
+          
+          # Default release notes if not provided
+          if [ -z "$NOTES" ]; then
+            NOTES="Fork release $VERSION"
+          fi
+          
+          gh release create "$VERSION" \
+            --title "Fork Release $VERSION" \
+            --notes "$NOTES" \
+            --generate-notes
+          
+          echo "Created release: $VERSION"
+
+      - name: Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.fork-version.outputs.fork_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ steps.tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Type:** ${{ github.event.inputs.version_type }}" >> $GITHUB_STEP_SUMMARY
