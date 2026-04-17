@@ -126,6 +126,9 @@ _UPDATE_CHECK_CACHE_SECONDS = 6 * 3600
 _FORK_OWNER = "AvonS"
 _FORK_REPO = "hermes-agent"
 
+# Fork feature flag - set to False to disable fork-specific behavior
+FORK_VERSION_ENABLED = True
+
 
 def get_installed_version() -> Optional[str]:
     """Get the installed release version from .update_check cache.
@@ -356,14 +359,27 @@ def get_git_banner_state(repo_dir: Optional[Path] = None) -> Optional[dict]:
 
 def format_banner_version_label() -> str:
     """Return the version label shown in the startup banner title."""
-    # Check if running from a fork release
-    installed_version = get_installed_version()
+    # Fork-specific behavior: show fork version when enabled and available
+    if FORK_VERSION_ENABLED:
+        installed_version = get_installed_version()
+        if installed_version:
+            base = f"Hermes Agent v{installed_version} ({RELEASE_DATE})"
+            state = get_git_banner_state()
+            if not state:
+                return base
+            
+            upstream = state["upstream"]
+            local = state["local"]
+            ahead = int(state.get("ahead") or 0)
+            
+            if ahead <= 0 or upstream == local:
+                return f"{base} · upstream {upstream}"
+            
+            carried_word = "commit" if ahead == 1 else "commits"
+            return f"{base} · upstream {upstream} · local {local} (+{ahead} carried {carried_word})"
     
-    if installed_version:
-        base = f"Hermes Agent v{installed_version} ({RELEASE_DATE})"
-    else:
-        base = f"Hermes Agent v{VERSION} ({RELEASE_DATE})"
-    
+    # Upstream default behavior
+    base = f"Hermes Agent v{VERSION} ({RELEASE_DATE})"
     state = get_git_banner_state()
     if not state:
         return base
