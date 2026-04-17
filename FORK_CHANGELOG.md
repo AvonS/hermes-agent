@@ -6,6 +6,8 @@
 <upstream_version>-avons.<fork_minor>.<fork_patch>
 ```
 
+Where `upstream_version` comes from `pyproject.toml`.
+
 **Examples:**
 - `0.10.0-avons.1.0` = upstream 0.10.0 + fork minor 1, patch 0
 - `0.10.0-avons.1.1` = upstream 0.10.0 + fork minor 1, patch 1
@@ -46,7 +48,7 @@ This avoids "fork drift" and makes upstream sync clear.
 ## Changelog
 
 ### 0.10.0-avons.1.0 (2025-04-17)
-**Upstream base:** 0.10.0
+**Upstream base:** from `pyproject.toml`
 
 **Fork changes:**
 - Add HERMES_HOME env var support
