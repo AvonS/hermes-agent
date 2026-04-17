@@ -1,9 +1,5 @@
 name: Fork Release
 
-# Opt-in to Node.js 24
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 on:
   workflow_dispatch:
     inputs:
@@ -23,6 +19,9 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Set Node.js 24 for runner
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     permissions:
       contents: write
     steps:
