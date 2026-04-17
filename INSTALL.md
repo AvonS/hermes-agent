@@ -1,9 +1,16 @@
-# Hermes Agent - Installation Guide
+# Hermes Agent AvonS-Fork- Installation Guide
 
 ## Quick Start
 
+#Create HERMES HOME and export
+
+## add to .zhrc or equivalent
+export HERMES_HOME=~/Work/hermes
+
+
 ```bash
 # 1. Clone and checkout release
+CD $HERMES_HOME
 git clone https://github.com/AvonS/hermes-agent.git
 cd hermes-agent
 git checkout v0.1.0
@@ -23,7 +30,7 @@ hermes setup
 
 - Python 3.11+
 - [uv](https://github.com/astral-sh/uv) (fast Python package manager)
-- API keys in `~/.hermes/.env` (see `.env.example`)
+- API keys in `$HERMES_HOME/.env` (see `.env.example`)
 
 ## Installation
 
@@ -68,7 +75,7 @@ hermes setup
 
 Or manually:
 ```bash
-cp ~/.hermes/.env.example ~/.hermes/.env
+cp $HERMES_HOME/.env.example ~/.hermes/.env
 # Edit ~/.hermes/.env with your API keys
 ```
 

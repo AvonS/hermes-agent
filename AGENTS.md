@@ -63,7 +63,9 @@ hermes-agent/
 └── batch_runner.py       # Parallel batch processing
 ```
 
-**User config:** `~/.hermes/config.yaml` (settings), `~/.hermes/.env` (API keys)
+**User config :** `$HERMES_HOME/config.yaml` (settings), `$HERMES_HOME/.env` (API keys)
+
+**User config Fallback :** `~/.hermes/config.yaml` (settings), `~/.hermes/.env` (API keys)
 
 ## File Dependency Chain
 
