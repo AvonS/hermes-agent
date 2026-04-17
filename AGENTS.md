@@ -67,6 +67,9 @@ hermes-agent/
 
 **User config Fallback :** `~/.hermes/config.yaml` (settings), `~/.hermes/.env` (API keys)
 
+> **Note:** Avoid hardcoding `~/.hermes` in code. Use `$HERMES_HOME` environment variable.
+> This will be fixed globally in a future enhancement to use proper config path resolution.
+
 ## File Dependency Chain
 
 ```
