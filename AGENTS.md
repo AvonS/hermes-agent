@@ -473,27 +473,3 @@ python -m pytest tests/tools/ -q                 # Tool-level tests
 ```
 
 Always run the full suite before pushing changes.
-
----
-
-## Fork Maintenance (AvonS/hermes-agent)
-
-Fork-specific development guidelines are maintained locally (not in git).
-
-> **Note:** Specs stored at `~/Work/Explore/hermes/specs/Build-plan/`
-
-### Quick Reference
-
-| Feature | Location | Toggle |
-|---------|----------|--------|
-| Fork version banner | `hermes_cli/banner.py` | `FORK_VERSION_ENABLED` flag |
-
-### Common Fork Tasks
-
-```bash
-# Check current banner version
-python -c "from hermes_cli.banner import format_banner_version_label; print(format_banner_version_label())"
-
-# Toggle fork version display
-python -c "from hermes_cli import banner; banner.FORK_VERSION_ENABLED = False; print(banner.format_banner_version_label())"
-```
