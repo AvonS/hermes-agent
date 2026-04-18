@@ -75,13 +75,28 @@ jobs:
           OPENAI_API_KEY: ""
           NOUS_API_KEY: ""
 
-  # Auto-create PR to release after tests pass (only on dev push)
+  # Auto-create PR to release after tests pass (only on dev push, once per day)
   promote-release:
     needs: [test, e2e]
     if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - name: Create PR to release
+      - name: Check if PR exists
+        id: check-pr
+        run: |
+          # Check if PR already exists from dev to release
+          PR=$(gh pr list --base release --head dev --state open --json number -q '.[0].number' 2>/dev/null || echo "")
+          if [ -n "$PR" ]; then
+            echo "PR #$PR already exists, not creating new one"
+            echo "pr_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "pr_exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Create PR if none exists
+        if: steps.check-pr.outputs.pr_exists == 'false'
         run: |
           TIMESTAMP=$(date +%Y%m%dT%H%M%SZ)
           gh pr create \
