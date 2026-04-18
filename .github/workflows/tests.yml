@@ -28,8 +28,9 @@ jobs:
         run: uv pip install pre-commit
 
       - name: Run ruff
-        run: ruff check .
-        run: ruff format --check .
+        run: |
+          ruff check .
+          ruff format --check .
 
       - name: Security scan
         run: |
