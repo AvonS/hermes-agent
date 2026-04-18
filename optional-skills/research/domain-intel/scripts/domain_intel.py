@@ -275,6 +275,8 @@ def check_available(domain):
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
+        # CodeQL: Require TLS 1.2 minimum (TLSv1 and TLSv1.1 are vulnerable)
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         with socket.create_connection((domain, 443), timeout=3) as s:
             with ctx.wrap_socket(s, server_hostname=domain):
                 ssl_up = True
