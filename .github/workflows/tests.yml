@@ -9,7 +9,6 @@ on:
 permissions:
   contents: read
 
-# Cancel in-progress runs for the same PR/branch
 concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
@@ -21,12 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
+      - name: Setup uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
 
-      - name: Set up Python 3.11
+      - name: Setup Python
         run: uv python install 3.11
 
       - name: Install tools
@@ -34,7 +33,7 @@ jobs:
           uv venv .venv --python 3.11
           uv pip install pre-commit bandit ruff --python .venv/bin/python
 
-      - name: Run ruff
+      - name: Lint & format
         run: |
           .venv/bin/ruff check .
           .venv/bin/ruff format --check .
@@ -56,28 +55,27 @@ jobs:
     timeout-minutes: 10
     needs: lint
     steps:
-      - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - uses: actions/checkout@v4
 
-      - name: Install system dependencies
+      - name: Install system deps
         run: sudo apt-get update && sudo apt-get install -y ripgrep
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-      - name: Set up Python 3.11
+      - name: Setup Python
         run: uv python install 3.11
 
-      - name: Install dependencies
+      - name: Install deps
         run: |
           uv venv .venv --python 3.11
           uv pip install -e ".[all,dev]" --python .venv/bin/python
 
       - name: Run tests
-        run: |
-          .venv/bin/python -m pytest tests/ -q --ignore=tests/integration --ignore=tests/e2e --ignore=tests/tools/test_rl_training_tool.py --ignore=tests/agent/test_subagent_progress.py --ignore=tests/cli/test_reasoning_command.py --ignore=tests/tools/test_delegate.py --ignore=tests/hermes_cli/test_cmd_update.py --ignore=tests/hermes_cli/test_model_validation.py --ignore=tests/hermes_cli/test_update_check.py --ignore=tests/tools/test_registry.py --tb=short -n auto
+        run: .venv/bin/python -m pytest tests/ -q --ignore=tests/integration --ignore=tests/e2e --ignore=tests/tools/test_rl_training_tool.py --ignore=tests/agent/test_subagent_progress.py --ignore=tests/cli/test_reasoning_command.py --ignore=tests/tools/test_delegate.py --ignore=tests/hermes_cli/test_cmd_update.py --ignore=tests/hermes_cli/test_model_validation.py --ignore=tests/hermes_cli/test_update_check.py --ignore=tests/tools/test_registry.py --tb=short -n auto
         env:
-          # Ensure tests don't accidentally call real APIs
           OPENROUTER_API_KEY: ""
           OPENAI_API_KEY: ""
           NOUS_API_KEY: ""
@@ -86,29 +84,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-      - name: Set up Python 3.11
+      - name: Setup Python
         run: uv python install 3.11
 
-      - name: Install dependencies
+      - name: Install deps
         run: |
           uv venv .venv --python 3.11
           uv pip install -e ".[all,dev]" --python .venv/bin/python
 
       - name: Run e2e tests
-        run: |
-          .venv/bin/python -m pytest tests/e2e/ -v --tb=short
+        run: .venv/bin/python -m pytest tests/e2e/ -v --tb=short
         env:
           OPENROUTER_API_KEY: ""
           OPENAI_API_KEY: ""
           NOUS_API_KEY: ""
 
-  # Auto-create PR to release after tests pass (only on dev push, once per day)
   promote-release:
     needs: [test, e2e]
     if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
@@ -119,25 +116,11 @@ jobs:
       - name: Check if PR exists
         id: check-pr
         run: |
-          # Check if PR already exists from dev to release
           PR=$(gh pr list --base release --head dev --state open --json number -q '.[0].number' 2>/dev/null || echo "")
-          if [ -n "$PR" ]; then
-            echo "PR #$PR already exists, not creating new one"
-            echo "pr_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "pr_exists=false" >> $GITHUB_OUTPUT
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Create PR if none exists
+          echo "pr_exists=$( [ -n "$PR" ] && echo true || echo false )" >> $GITHUB_OUTPUT
+
+      - name: Create PR
         if: steps.check-pr.outputs.pr_exists == 'false'
-        run: |
-          TIMESTAMP=$(date +%Y%m%dT%H%M%SZ)
-          gh pr create \
-            --title "Release $TIMESTAMP" \
-            --body "Auto-created after tests passed on dev. Tests must pass before merge." \
-            --base release \
-            --head dev
+        run: gh pr create --title "Release $(date +%Y%m%dT%H%M%SZ)" --body "Auto-created after tests passed on dev." --base release --head dev
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
