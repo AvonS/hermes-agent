@@ -75,11 +75,23 @@ def main():
         run(["gh", "pr", "create", "--title", f"Upstream Merge Conflict {timestamp}", "--body", "Automatic conflict PR", "--head", branch, "--base", "main"])
         sys.exit(1)
 
-    # Step 3: Sync dev
+    # Step 3: Sync dev (push triggers tests on dev)
     try:
         run(["git", "checkout", "dev"])
         run(["git", "merge", "--no-ff", "main"])
         run(["git", "push", ORIGIN_REMOTE, "dev"])
+        # Tests will run automatically on dev after push
+        # On test pass → create PR to release
+        send_telegram(f"✅ Synced upstream → dev. Tests running on dev...")
+        
+        # Create PR dev → release (tests will be required before merge)
+        run(["gh", "pr", "create", 
+            "--title", f"Release {timestamp}",
+            "--body", "Auto-created from upstream sync. Tests must pass before merge.",
+            "--base", "release",
+            "--head", "dev"])
+        send_telegram(f"📋 Created PR dev → release. Will auto-merge after tests pass.")
+        
     except subprocess.CalledProcessError:
         run(["git", "merge", "--abort"], check=False)
         branch = f"dev-sync-conflict-{timestamp}"
