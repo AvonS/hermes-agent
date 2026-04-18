@@ -31,6 +31,19 @@ jobs:
         run: ruff check .
         run: ruff format --check .
 
+      - name: Security scan
+        run: |
+          uv pip install bandit
+          bandit -r . -x ./tests,./environments -f json --output bandit-report.json || true
+        continue-on-error: true
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-report
+          path: bandit-report.json
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10

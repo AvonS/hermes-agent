@@ -9,6 +9,12 @@ repos:
         args: [--fix]
       - id: ruff-format
 
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.9
+    hooks:
+      - id: bandit
+        args: [-x, tests,environments]
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
