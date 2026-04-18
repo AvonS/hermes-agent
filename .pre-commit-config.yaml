@@ -1,0 +1,28 @@
+# Pre-commit hooks for AvonS/hermes-agent fork
+# Install: pip install pre-commit && pre-commit install
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        args: ['--max-line-length=120', '--ignore=E501,W503']
+
+  - repo: local
+    hooks:
+      - id: python-syntax
+        name: Check Python syntax
+        entry: python -m py_compile
+        language: system
+        types: [python]
+        pass_filenames: false
+        files: \.py$
