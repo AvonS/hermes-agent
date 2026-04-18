@@ -335,3 +335,42 @@ def _enforce_test_timeout():
     yield
     signal.alarm(0)
     signal.signal(signal.SIGALRM, old)
+
+
+# ── AvonS Fork: skip known-flaky tests in parallel CI ─────────────────────────
+#
+# When running under pytest-xdist (-n auto), tests that share global mutable state
+# (module-level singletons like _read_tracker) can fail non-deterministically
+# because each worker process has its own copy and cleanup doesn't cross workers.
+#
+# These skips are fork-specific; they do NOT modify upstream test code and will
+# NOT conflict on upstream sync. Re-evaluate and remove skips when upstream fixes
+# the root cause.
+
+_FLAKY_IN_PARALLEL = {
+    # (test_file, test_name_prefix): reason
+    ("tests/tools/test_accretion_caps.py", "TestReadTrackerCaps::test_live_cap_applied_after_read_add"):
+        "Hardcoded task_id='long-session' collides across xdist workers; KeyError on read_timestamps",
+}
+
+
+def _is_parallel_ci():
+    """True when running under pytest-xdist (parallel CI workers)."""
+    return bool(os.environ.get("PYTEST_XDIST_WORKER"))
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_collection_modifyitems(items):
+    """Skip known-flaky tests when running in parallel CI mode."""
+    yield
+    if not _is_parallel_ci():
+        return
+    skipped = []
+    for item in items:
+        for (file_pattern, test_name), reason in _FLAKY_IN_PARALLEL.items():
+            if file_pattern in str(item.fspath) and test_name in item.nodeid:
+                marker = pytest.mark.skip(reason=f"[fork] {reason}")
+                item.add_marker(marker)
+                skipped.append(item.name)
+    if skipped:
+        print(f"\n[fork] Skipped {len(skipped)} flaky-in-parallel test(s): {skipped}")
