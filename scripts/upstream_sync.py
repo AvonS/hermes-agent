@@ -80,17 +80,9 @@ def main():
         run(["git", "checkout", "dev"])
         run(["git", "merge", "--no-ff", "main"])
         run(["git", "push", ORIGIN_REMOTE, "dev"])
-        # Tests will run automatically on dev after push
-        # On test pass → create PR to release
-        send_telegram(f"✅ Synced upstream → dev. Tests running on dev...")
-        
-        # Create PR dev → release (tests will be required before merge)
-        run(["gh", "pr", "create", 
-            "--title", f"Release {timestamp}",
-            "--body", "Auto-created from upstream sync. Tests must pass before merge.",
-            "--base", "release",
-            "--head", "dev"])
-        send_telegram(f"📋 Created PR dev → release. Will auto-merge after tests pass.")
+        # Tests will run automatically on dev push
+        # After tests pass → tests.yml auto-creates PR to release
+        send_telegram(f"✅ Synced upstream → dev. Tests running... PR will be created after tests pass.")
         
     except subprocess.CalledProcessError:
         run(["git", "merge", "--abort"], check=False)
