@@ -23,9 +23,11 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Install pre-commit
-        run: uv pip install pre-commit
+        run: uv pip install --system pre-commit
 
       - name: Run ruff
         run: |
@@ -34,7 +36,7 @@ jobs:
 
       - name: Security scan
         run: |
-          uv pip install bandit
+          uv pip install --system bandit
           bandit -r . -x ./tests,./environments -f json --output bandit-report.json || true
         continue-on-error: true
 
@@ -65,13 +67,11 @@ jobs:
       - name: Install dependencies
         run: |
           uv venv .venv --python 3.11
-          source .venv/bin/activate
-          uv pip install -e ".[all,dev]"
+          uv pip install -e ".[all,dev]" --python .venv/bin/python
 
       - name: Run tests
         run: |
-          source .venv/bin/activate
-          python -m pytest tests/ -q --ignore=tests/integration --ignore=tests/e2e --ignore=tests/tools/test_rl_training_tool.py --ignore=tests/agent/test_subagent_progress.py --ignore=tests/cli/test_reasoning_command.py --ignore=tests/tools/test_delegate.py --ignore=tests/hermes_cli/test_cmd_update.py --ignore=tests/hermes_cli/test_model_validation.py --ignore=tests/hermes_cli/test_update_check.py --ignore=tests/tools/test_registry.py --tb=short -n auto
+          .venv/bin/python -m pytest tests/ -q --ignore=tests/integration --ignore=tests/e2e --ignore=tests/tools/test_rl_training_tool.py --ignore=tests/agent/test_subagent_progress.py --ignore=tests/cli/test_reasoning_command.py --ignore=tests/tools/test_delegate.py --ignore=tests/hermes_cli/test_cmd_update.py --ignore=tests/hermes_cli/test_model_validation.py --ignore=tests/hermes_cli/test_update_check.py --ignore=tests/tools/test_registry.py --tb=short -n auto
         env:
           # Ensure tests don't accidentally call real APIs
           OPENROUTER_API_KEY: ""
@@ -94,13 +94,11 @@ jobs:
       - name: Install dependencies
         run: |
           uv venv .venv --python 3.11
-          source .venv/bin/activate
-          uv pip install -e ".[all,dev]"
+          uv pip install -e ".[all,dev]" --python .venv/bin/python
 
       - name: Run e2e tests
         run: |
-          source .venv/bin/activate
-          python -m pytest tests/e2e/ -v --tb=short
+          .venv/bin/python -m pytest tests/e2e/ -v --tb=short
         env:
           OPENROUTER_API_KEY: ""
           OPENAI_API_KEY: ""
