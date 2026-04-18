@@ -111,8 +111,10 @@ class TestReadTrackerCaps:
 
     def test_live_cap_applied_after_read_add(self, tmp_path, monkeypatch):
         """Live read_file path enforces caps."""
+        import uuid
         from tools import file_tools as ft
 
+        task_id = f"cap-test-{uuid.uuid4().hex[:8]}"
         monkeypatch.setattr(ft, "_READ_HISTORY_CAP", 3)
         monkeypatch.setattr(ft, "_DEDUP_CAP", 3)
         monkeypatch.setattr(ft, "_READ_TIMESTAMPS_CAP", 3)
@@ -121,10 +123,11 @@ class TestReadTrackerCaps:
         for i in range(10):
             p = tmp_path / f"file_{i}.txt"
             p.write_text(f"content {i}\n" * 10)
-            ft.read_file_tool(path=str(p), task_id="long-session")
+            ft.read_file_tool(path=str(p), task_id=task_id)
 
         with ft._read_tracker_lock:
-            td = ft._read_tracker["long-session"]
+            td = ft._read_tracker[task_id]
+            assert "read_timestamps" in td
             assert len(td["read_history"]) <= 3
             assert len(td["dedup"]) <= 3
             assert len(td["read_timestamps"]) <= 3
