@@ -2,6 +2,7 @@ name: Supply Chain Audit
 
 on:
   pull_request:
+    branches: [do-not-run]
     types: [opened, synchronize, reopened]
 
 permissions:
