@@ -26,18 +26,22 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Install pre-commit
-        run: uv pip install --system pre-commit
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+
+      - name: Install tools
+        run: |
+          uv venv .venv --python 3.11
+          uv pip install pre-commit bandit ruff --python .venv/bin/python
 
       - name: Run ruff
         run: |
-          ruff check .
-          ruff format --check .
+          .venv/bin/ruff check .
+          .venv/bin/ruff format --check .
 
       - name: Security scan
         run: |
-          uv pip install --system bandit
-          bandit -r . -x ./tests,./environments -f json --output bandit-report.json || true
+          .venv/bin/python -m bandit -r . -x ./tests,./environments -f json --output bandit-report.json || true
         continue-on-error: true
 
       - name: Upload security report
