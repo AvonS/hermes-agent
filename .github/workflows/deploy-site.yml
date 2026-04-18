@@ -22,6 +22,7 @@ concurrency:
 
 jobs:
   deploy-vercel:
+    if: github.repository != 'AvonS/hermes-agent'
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:

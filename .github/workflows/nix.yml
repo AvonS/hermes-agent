@@ -23,6 +23,7 @@ concurrency:
 
 jobs:
   nix:
+    if: github.repository != 'AvonS/hermes-agent'
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
