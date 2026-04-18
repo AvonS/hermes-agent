@@ -351,6 +351,10 @@ _FLAKY_IN_PARALLEL = {
     # (test_file, test_name_prefix): reason
     ("tests/tools/test_accretion_caps.py", "TestReadTrackerCaps::test_live_cap_applied_after_read_add"):
         "Hardcoded task_id='long-session' collides across xdist workers; KeyError on read_timestamps",
+    ("tests/tools/test_command_guards.py", "TestTirithWarnSafe::test_warn_session_approved"):
+        "Uses approve_session() which doesn't survive parallel worker isolation",
+    ("tests/tools/test_command_guards.py", "TestCombinedWarnings::test_combined_cli_session_approves_both"):
+        "Uses approve_session() which doesn't survive parallel worker isolation",
 }
 
 
