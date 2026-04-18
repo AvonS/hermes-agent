@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
   pull_request:
-    branches: [main]
+    branches: [dev]
 
 permissions:
   contents: read
@@ -74,3 +74,20 @@ jobs:
           OPENROUTER_API_KEY: ""
           OPENAI_API_KEY: ""
           NOUS_API_KEY: ""
+
+  # Auto-create PR to release after tests pass (only on dev push)
+  promote-release:
+    needs: [test, e2e]
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create PR to release
+        run: |
+          TIMESTAMP=$(date +%Y%m%dT%H%M%SZ)
+          gh pr create \
+            --title "Release $TIMESTAMP" \
+            --body "Auto-created after tests passed on dev. Tests must pass before merge." \
+            --base release \
+            --head dev
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

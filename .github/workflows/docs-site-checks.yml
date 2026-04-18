@@ -2,6 +2,7 @@ name: Docs Site Checks
 
 on:
   pull_request:
+    branches: [do-not-run]
     paths:
       - 'website/**'
       - '.github/workflows/docs-site-checks.yml'

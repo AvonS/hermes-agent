@@ -2,9 +2,9 @@ name: Docker Build and Publish
 
 on:
   push:
-    branches: [main]
+    branches: [do-not-run]
   pull_request:
-    branches: [main]
+    branches: [do-not-run]
   release:
     types: [published]
 

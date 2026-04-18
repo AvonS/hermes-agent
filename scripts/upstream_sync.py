@@ -75,11 +75,15 @@ def main():
         run(["gh", "pr", "create", "--title", f"Upstream Merge Conflict {timestamp}", "--body", "Automatic conflict PR", "--head", branch, "--base", "main"])
         sys.exit(1)
 
-    # Step 3: Sync dev
+    # Step 3: Sync dev (push triggers tests on dev)
     try:
         run(["git", "checkout", "dev"])
         run(["git", "merge", "--no-ff", "main"])
         run(["git", "push", ORIGIN_REMOTE, "dev"])
+        # Tests will run automatically on dev push
+        # After tests pass → tests.yml auto-creates PR to release
+        send_telegram(f"✅ Synced upstream → dev. Tests running... PR will be created after tests pass.")
+        
     except subprocess.CalledProcessError:
         run(["git", "merge", "--abort"], check=False)
         branch = f"dev-sync-conflict-{timestamp}"
@@ -87,17 +91,8 @@ def main():
         send_telegram(f"⚠️ Merge conflict on dev. Resolve branch: {branch}")
         run(["gh", "pr", "create", "--title", f"Dev Merge Conflict {timestamp}", "--body", "Automatic conflict PR", "--head", branch, "--base", "dev"])
         sys.exit(1)
-
-    # Step 4: Merge dev → release (auto-triggers release workflow)
-    try:
-        run(["git", "checkout", "release"])
-        run(["git", "merge", "--no-ff", "dev"])
-        run(["git", "push", ORIGIN_REMOTE, "release"])
-        send_telegram(f"🚀 Merged dev → release. Release workflow triggered.")
-    except subprocess.CalledProcessError:
-        run(["git", "merge", "--abort"], check=False)
-        send_telegram(f"⚠️ Merge conflict on release. Manual resolution needed.")
-        sys.exit(1)
+    
+    send_telegram(f"✅ Upstream sync complete. main → dev merged. Tests pass? Create PR to release.")
 
     # Log successful main → dev sync to markdown log
     log_dir = os.path.join(HERMES_HOME, "logs", "git-merge")
