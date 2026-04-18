@@ -75,13 +75,18 @@ upstream/main → fork/main → fork/dev → [push triggers tests] → [tests pa
 1. Upstream sync runs (cron 9am/9pm)
 2. upstream → main → dev (no conflict)
 3. Push to dev → triggers **tests workflow on dev**
-4. Tests pass → **auto-create PR dev → release**
+4. Tests pass → **auto-create PR dev → release** (if none exists)
 5. PR requires tests passing to merge
 
 **Flow:**
 ```
-upstream → main → dev → [tests on dev] → PR to release → [merge]
+upstream → main → dev → [tests on dev] → [tests pass] → [auto-PR to release]
 ```
+
+**Multiple pushes:**
+- First push → creates PR
+- Subsequent pushes → updates existing PR (GitHub auto-updates)
+- After merge → next push creates new PR
 
 **Conflict on dev:** Creates PR for manual resolution
 ```
