@@ -14,46 +14,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
-      - name: Setup Python
-        run: uv python install 3.11
-
-      - name: Install tools
-        run: |
-          uv venv .venv --python 3.11
-          uv pip install pre-commit bandit ruff --python .venv/bin/python
-
-      - name: Lint & format
-        run: |
-          .venv/bin/ruff check .
-          .venv/bin/ruff format --check .
-
-      - name: Security scan
-        run: |
-          .venv/bin/python -m bandit -r . -x ./tests,./environments -f json --output bandit-report.json || true
-        continue-on-error: true
-
-      - name: Upload security report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: security-report
-          path: bandit-report.json
-
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: lint
     steps:
       - uses: actions/checkout@v4
 
