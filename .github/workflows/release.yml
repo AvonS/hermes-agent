@@ -1,6 +1,9 @@
 name: Release
 
 on:
+  push:
+    branches:
+      - release
   workflow_dispatch:
     inputs:
       version_type:
@@ -48,6 +51,13 @@ jobs:
         run: |
           UPSTREAM=${{ steps.version.outputs.upstream_version }}
           
+          # Determine bump type: default to patch for auto-push, use input for manual
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_type }}" ]; then
+            BUMP_TYPE="${{ github.event.inputs.version_type }}"
+          else
+            BUMP_TYPE="patch"  # Auto-bump on push
+          fi
+          
           # Get last fork tag
           LAST_TAG=$(git tag --list '*-avons.*' | sort -V | tail -1 || echo "")
           
@@ -59,8 +69,6 @@ jobs:
             # Parse last tag: e.g., 0.10.0-avons.1.0
             LAST_MINOR=$(echo $LAST_TAG | sed 's/.*-avons.\([0-9]*\).*/\1/')
             LAST_PATCH=$(echo $LAST_TAG | sed 's/.*-avons.[0-9]*.\([0-9]*\)/\1/')
-            
-            BUMP_TYPE="${{ github.event.inputs.version_type }}"
             
             if [ "$BUMP_TYPE" == "minor" ]; then
               FORK_MINOR=$((LAST_MINOR + 1))
@@ -105,7 +113,12 @@ gh release "$VERSION" \
 
       - name: Summary
         run: |
+          TRIGGER_TYPE="Auto (push to release)"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TRIGGER_TYPE="Manual"
+          fi
+          
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ steps.fork-version.outputs.fork_version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Tag:** ${{ steps.tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Type:** ${{ github.event.inputs.version_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** $TRIGGER_TYPE" >> $GITHUB_STEP_SUMMARY
