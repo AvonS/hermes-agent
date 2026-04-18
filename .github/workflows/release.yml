@@ -58,6 +58,12 @@ jobs:
             BUMP_TYPE="patch"  # Auto-bump on push
           fi
           
+          # Check if there are local commits on dev not in upstream
+          # If dev is just fast-forward from upstream, no fork version bump needed
+          LOCAL_COMMITS=$(git log origin/main..origin/dev --oneline 2>/dev/null | wc -l || echo "0")
+          echo "Local commits on dev not in upstream: $LOCAL_COMMITS"
+          echo "local_commits=$LOCAL_COMMITS" >> $GITHUB_OUTPUT
+          
           # Get last fork tag
           LAST_TAG=$(git tag --list '*-avons.*' | sort -V | tail -1 || echo "")
           
@@ -70,11 +76,17 @@ jobs:
             LAST_MINOR=$(echo $LAST_TAG | sed 's/.*-avons.\([0-9]*\).*/\1/')
             LAST_PATCH=$(echo $LAST_TAG | sed 's/.*-avons.[0-9]*.\([0-9]*\)/\1/')
             
-            if [ "$BUMP_TYPE" == "minor" ]; then
+            # Only bump if there are local commits or manual trigger
+            if [ "$BUMP_TYPE" = "patch" ] && [ "$LOCAL_COMMITS" = "0" ]; then
+              # No local changes, just upstream sync - keep same fork version
+              FORK_MINOR=$LAST_MINOR
+              FORK_PATCH=$LAST_PATCH
+              echo "No local changes, skipping fork version bump"
+            elif [ "$BUMP_TYPE" == "minor" ]; then
               FORK_MINOR=$((LAST_MINOR + 1))
               FORK_PATCH=0
             else
-              # patch
+              # patch (with local changes)
               FORK_MINOR=$LAST_MINOR
               FORK_PATCH=$((LAST_PATCH + 1))
             fi
@@ -122,3 +134,4 @@ gh release "$VERSION" \
           echo "**Version:** ${{ steps.fork-version.outputs.fork_version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Tag:** ${{ steps.tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
           echo "**Trigger:** $TRIGGER_TYPE" >> $GITHUB_STEP_SUMMARY
+          echo "**Local Commits:** ${{ steps.fork-version.outputs.local_commits }}" >> $GITHUB_STEP_SUMMARY
