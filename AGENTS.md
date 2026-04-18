@@ -407,6 +407,38 @@ Activate with `/skin cyberpunk` or `display.skin: cyberpunk` in config.yaml.
 ---
 
 ## Important Policies
+### Fork-Non-Conflict Principle
+
+**Core rule: Never modify upstream code to fix fork problems.**
+
+Upstream-synced files (`tests/*.py`, `tools/*.py`, etc.) are overwritten on every
+`git merge upstream/main`. Fork changes to those files get clobbered silently.
+
+**Two categories of fork files:**
+
+| Category | Examples | Sync-safe? |
+|----------|---------|------------|
+| Fork-managed | `tests/conftest.py`, `.github/workflows/*.yml`, `AGENTS.md` | ✅ survives sync |
+| Upstream-synced | `tests/tools/*.py`, `tools/*.py` | ❌ overwritten |
+
+**Fork-safe patterns (ranked by preference):**
+
+1. **Fork-managed wrapper** (preferred): modify a fork-managed file that references
+   upstream code, without touching the upstream code itself.
+   - Example: `tests/conftest.py` — add `pytest_collection_modifyitems` hook to skip
+     flaky tests by pattern, without patching the test itself.
+
+2. **Environment/config flag**: add a fork-specific env var or config key in
+   `hermes_cli/config.py` that fork-managed code reads.
+
+3. **Conditional import**: use env-var guards in fork-managed fixture files.
+
+4. **Patch file** (last resort): document in `specs/Feature/XXX-*.md` under
+   `## Pending Sync Patches` and re-apply manually after each sync. Better yet —
+   submit the fix upstream so it eventually becomes sync-safe.
+
+**See also:** `specs/Overview/000-fork-git-flow.md` §2.0, `skills/devops/fork-version-auto-release`
+
 ### Prompt Caching Must Not Break
 
 Hermes-Agent ensures caching remains valid throughout a conversation. **Do NOT implement changes that would:**
