@@ -16,7 +16,6 @@ permissions:
 
 jobs:
   build-index:
-    if: github.repository != 'AvonS/hermes-agent'
     # Only run on the upstream repository, not on forks
     if: github.repository == 'NousResearch/hermes-agent'
     runs-on: ubuntu-latest

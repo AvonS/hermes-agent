@@ -2,7 +2,7 @@ name: Supply Chain Audit
 
 on:
   pull_request:
-    branches: [do-not-run]
+    branches: [dev]
     types: [opened, synchronize, reopened]
 
 permissions:
@@ -11,7 +11,6 @@ permissions:
 
 jobs:
   scan:
-    if: github.repository != 'AvonS/hermes-agent'
     name: Scan PR for supply chain risks
     runs-on: ubuntu-latest
     steps:
