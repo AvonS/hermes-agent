@@ -88,9 +88,6 @@ def main():
         run(["gh", "pr", "create", "--title", f"Dev Merge Conflict {timestamp}", "--body", "Automatic conflict PR", "--head", branch, "--base", "dev"])
         sys.exit(1)
     
-    # Note: dev → release requires PR (protected branch)
-    # Manual release after tests pass:
-    # git checkout release && git merge dev && git push origin release
     send_telegram(f"✅ Upstream sync complete. main → dev merged. Tests pass? Create PR to release.")
 
     # Log successful main → dev sync to markdown log
