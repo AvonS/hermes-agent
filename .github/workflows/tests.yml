@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -70,21 +69,4 @@ jobs:
           OPENAI_API_KEY: ""
           NOUS_API_KEY: ""
 
-  promote-release:
-    needs: [test, e2e]
-    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Check if PR exists
-        id: check-pr
-        run: |
-          PR=$(gh pr list --base release --head dev --state open --json number -q '.[0].number' 2>/dev/null || echo "")
-          echo "pr_exists=$( [ -n "$PR" ] && echo true || echo false )" >> $GITHUB_OUTPUT
-
-      - name: Create PR
-        if: steps.check-pr.outputs.pr_exists == 'false'
-        run: gh pr create --title "Release $(date +%Y%m%dT%H%M%SZ)" --body "Auto-created after tests passed on dev." --base release --head dev
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
