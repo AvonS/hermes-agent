@@ -1,0 +1,13 @@
+# CodeQL configuration - exclude false positive paths
+name: hermes-agent-security
+description: Exclude paths with known false positives
+
+# Exclude test files (no need to scan for security)
+paths-ignore:
+  - '**/test_*.py'
+  - '**/tests/**'
+  - '**/*_test.py'
+
+# Still run default security queries on other code
+queries:
+  - uses: security-extended

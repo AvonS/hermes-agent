@@ -63,8 +63,16 @@ def subdomains(domain, include_expired=False, limit=200):
 
 # ─── SSL Certificate Inspection ────────────────────────────────────────────
 
-def check_ssl(host, port=443, timeout=10):
-    """Inspect the TLS certificate of a host."""
+def check_ssl(host, port=443, timeout=10, allow_insecure=False):
+    """Inspect the TLS certificate of a host.
+    
+    Args:
+        host: Domain to check
+        port: SSL port (default 443)
+        timeout: Connection timeout
+        allow_insecure: If True, fall back to no verification on cert errors.
+                      Default False prevents MITM downgrade attacks.
+    """
     def flat(rdns):
         r = {}
         for rdn in rdns:
@@ -88,6 +96,10 @@ def check_ssl(host, port=443, timeout=10):
             with ctx.wrap_socket(sock, server_hostname=host) as s:
                 cert, cipher, proto = s.getpeercert(), s.cipher(), s.version()
     except ssl.SSLCertVerificationError as e:
+        # SECURITY FIX: Don't fall back to insecure verification by default.
+        # This prevents MITM attacks on fallback. Caller can set allow_insecure=True.
+        if not allow_insecure:
+            return None  # Fail securely instead of downgrading
         warning = str(e)
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
