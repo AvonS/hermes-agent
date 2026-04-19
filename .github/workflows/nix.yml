@@ -1,18 +1,7 @@
 name: Nix
 
 on:
-  push:
-    branches: [do-not-run]
-  pull_request:
-    paths:
-      - 'flake.nix'
-      - 'flake.lock'
-      - 'nix/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - 'hermes_cli/**'
-      - 'run_agent.py'
-      - 'acp_adapter/**'
+  workflow_dispatch:
 
 permissions:
   contents: read
