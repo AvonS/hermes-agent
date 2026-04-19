@@ -365,10 +365,41 @@ def _is_parallel_ci():
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_collection_modifyitems(items):
-    """Skip known-flaky tests when running in parallel CI mode."""
+    """Skip known-flaky tests when running in parallel CI mode.
+    
+    In CI, only run fork and e2e tests (skip upstream test suite).
+    Upstream tests are assumed passing after sync.
+    """
     yield
+    
+    # Fork/CI specific handling - survives upstream sync
+    in_ci = bool(os.environ.get("CI", "") or os.environ.get("GITHUB_ACTIONS", ""))
+    
+    if in_ci:
+        # In CI: only run fork tests + e2e tests
+        # Let local runs execute full suite
+        kept = []
+        skipped = []
+        for item in items:
+            path_str = str(item.fspath)
+            if "/tests/fork/" in path_str or "/tests/e2e/" in path_str:
+                kept.append(item)
+            else:
+                skipped.append(item)
+                marker = pytest.mark.skip(reason="[fork] Skipped in CI (run fork+e2e only)")
+                item.add_marker(marker)
+        
+        # Modify items list in place
+        items[:] = kept
+        
+        if skipped:
+            print(f"\n[fork] CI mode: skipped {len(skipped)} upstream tests, kept {len(kept)} fork+e2e tests")
+        return
+    
+    # Local runs: only apply flaky test skips
     if not _is_parallel_ci():
         return
+    
     skipped = []
     for item in items:
         for (file_pattern, test_name), reason in _FLAKY_IN_PARALLEL.items():

@@ -108,7 +108,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION=${{ steps.tag.outputs.tag }}
+          VERSION=${{ steps.fork-version.outputs.fork_version }}
           NOTES="${{ github.event.inputs.notes }}"
           
           # Default release notes if not provided
@@ -119,6 +119,24 @@ jobs:
           gh release "$VERSION" --title "Release $VERSION" --notes "$NOTES" --generate-notes
           
           echo "Created release: $VERSION"
+
+      - name: Write .fork-version file
+        run: |
+          VERSION=${{ steps.fork-version.outputs.fork_version }}
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          # Write fork version metadata file
+          # This is separate from .update_check and survives upstream sync
+          cat > $HOME/.fork-version << EOF
+          {
+            "installed_version": "$VERSION",
+            "installed_at": "$TIMESTAMP",
+            "source": "release"
+          }
+          EOF
+          
+          echo "Wrote ~/.fork-version:"
+          cat $HOME/.fork-version
 
       - name: Summary
         run: |

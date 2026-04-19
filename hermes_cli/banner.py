@@ -131,15 +131,29 @@ FORK_VERSION_ENABLED = True
 
 
 def get_installed_version() -> Optional[str]:
-    """Get the installed release version from .update_check cache.
+    """Get the installed release version.
     
-    Returns the stored installed_version if available, otherwise
-    tries git describe --tags --exact-match as fallback.
+    Reads from .fork-version first (survives upstream sync), then
+    falls back to .update_check cache, then git describe.
+    
+    When detected via git describe on a release tag, auto-creates
+    .fork-version for persistence across syncs.
     """
     hermes_home = get_hermes_home()
-    cache_file = hermes_home / ".update_check"
     
-    # Check cache first
+    # 1. Check .fork-version (survives upstream sync)
+    fork_version_file = hermes_home / ".fork-version"
+    if fork_version_file.exists():
+        try:
+            data = json.loads(fork_version_file.read_text())
+            version = data.get("installed_version")
+            if version:
+                return version
+        except Exception:
+            pass
+    
+    # 2. Fall back to .update_check cache (may be reset during upstream sync)
+    cache_file = hermes_home / ".update_check"
     if cache_file.exists():
         try:
             cached = json.loads(cache_file.read_text())
@@ -149,7 +163,8 @@ def get_installed_version() -> Optional[str]:
         except Exception:
             pass
     
-    # Fallback: check git describe
+    # 3. Fallback: check git describe (exact tag match for fork release tags)
+    # When found, auto-create .fork-version for persistence
     repo_dir = hermes_home / "hermes-agent"
     if not (repo_dir / ".git").exists():
         repo_dir = Path(__file__).parent.parent.resolve()
@@ -166,6 +181,16 @@ def get_installed_version() -> Optional[str]:
             tag = result.stdout.strip()
             # Only return if it's a fork version tag
             if "-avons." in tag:
+                # Auto-create .fork-version for persistence across syncs
+                try:
+                    import time
+                    fork_version_file.write_text(json.dumps({
+                        "installed_version": tag,
+                        "installed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "source": "git-describe-auto"
+                    }, indent=2))
+                except Exception:
+                    pass  # Don't fail if we can't write
                 return tag
     except Exception:
         pass

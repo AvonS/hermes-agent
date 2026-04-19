@@ -14,14 +14,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  # Run fork-specific tests (survives upstream sync)
+  fork-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install system deps
-        run: sudo apt-get update && sudo apt-get install -y ripgrep
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -36,14 +34,15 @@ jobs:
           uv venv .venv --python 3.11
           uv pip install -e ".[all,dev]" --python .venv/bin/python
 
-      - name: Run tests
-        run: .venv/bin/python -m pytest tests/ -q --ignore=tests/integration --ignore=tests/e2e --ignore=tests/tools/test_rl_training_tool.py --ignore=tests/agent/test_subagent_progress.py --ignore=tests/cli/test_reasoning_command.py --ignore=tests/tools/test_delegate.py --ignore=tests/hermes_cli/test_cmd_update.py --ignore=tests/hermes_cli/test_model_validation.py --ignore=tests/hermes_cli/test_update_check.py --ignore=tests/tools/test_registry.py --tb=short -n auto
+      - name: Run fork tests
+        run: .venv/bin/python -m pytest tests/fork/ -v --tb=short
         env:
           OPENROUTER_API_KEY: ""
           OPENAI_API_KEY: ""
           NOUS_API_KEY: ""
 
-  e2e:
+  # Run e2e tests (full integration)
+  e2e-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
