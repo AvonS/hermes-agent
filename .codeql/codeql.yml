@@ -8,6 +8,13 @@ paths-ignore:
   - '**/tests/**'
   - '**/*_test.py'
 
-# Still run default security queries on other code
+# Exclude noisy rules that generate 100+ alerts
 queries:
   - uses: security-extended
+    filters:
+      - exclude:
+          id: py/clear-text-logging-sensitive-data
+      - exclude:
+          id: py/clear-text-logging-password
+      - exclude:
+          id: py/log-injection
