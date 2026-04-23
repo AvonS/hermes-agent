@@ -439,6 +439,26 @@ Upstream-synced files (`tests/*.py`, `tools/*.py`, etc.) are overwritten on ever
 
 **See also:** `specs/Overview/000-fork-git-flow.md` §2.0, `skills/devops/fork-version-auto-release`
 
+### Local Git Hooks
+
+The fork uses local git hooks to enforce the feature branch workflow:
+
+- **`scripts/pre-commit-hook`**: Blocks direct commits to `main`, `dev`, `release`
+- **`scripts/install-hooks.sh`**: Installs the hook to `.git/hooks/`
+- **`scripts/hg.py`**: Feature branch workflow CLI
+
+```bash
+# Install hooks after cloning
+bash scripts/install-hooks.sh
+
+# Use hg wrapper for feature workflow
+python scripts/hg.py feature start my-feature
+python scripts/hg.py feature finish
+python scripts/hg.py sync
+```
+
+Run `bash scripts/install-hooks.sh` after cloning or pulling updates to enable the pre-commit hook.
+
 ### Prompt Caching Must Not Break
 
 Hermes-Agent ensures caching remains valid throughout a conversation. **Do NOT implement changes that would:**

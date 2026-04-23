@@ -101,30 +101,31 @@ def main():
     parser = argparse.ArgumentParser(description="Hermes Git wrapper (hg)")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("feature", help="Feature branch workflow")
-    subparsers.add_parser("sync", help="Sync from upstream")
-    subparsers.add_parser("release", help="Release workflow")
+    # feature subcommand with its own subparsers
+    feature_parser = subparsers.add_parser("feature", help="Feature branch workflow")
+    feature_subparsers = feature_parser.add_subparsers(dest="feature_command")
+    feature_subparsers.add_parser("start", help="Start new feature branch").add_argument("name", help="Feature name")
+    feature_subparsers.add_parser("finish", help="Merge feature branch to dev")
+
+    # sync subcommand
+    subparsers.add_parser("sync", help="Sync from upstream/main to dev")
+
+    # release subcommand
+    subparsers.add_parser("release", help="Release workflow (dev -> release)")
 
     args = parser.parse_args()
 
-    # Parse sub-commands
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "feature":
-            if len(sys.argv) > 2:
-                if sys.argv[2] == "start" and len(sys.argv) > 3:
-                    feature_start(sys.argv[3])
-                elif sys.argv[2] == "finish":
-                    feature_finish()
-                else:
-                    print(__doc__)
-            else:
-                print(__doc__)
-        elif sys.argv[1] == "sync":
-            sync()
-        elif sys.argv[1] == "release":
-            release()
-    else:
-        print(__doc__)
+    if args.command == "feature":
+        if args.feature_command == "start":
+            feature_start(args.name)
+        elif args.feature_command == "finish":
+            feature_finish()
+        else:
+            feature_parser.print_help()
+    elif args.command == "sync":
+        sync()
+    elif args.command == "release":
+        release()
 
 
 if __name__ == "__main__":
