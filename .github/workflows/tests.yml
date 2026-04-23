@@ -2,12 +2,12 @@ name: Tests
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
   pull_request:
-    branches: [main]
+    branches: [dev]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
