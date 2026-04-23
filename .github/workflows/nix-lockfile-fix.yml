@@ -22,12 +22,14 @@ jobs:
   fix:
     # Run on manual dispatch OR when a task-list checkbox in the sticky
     # lockfile-check comment flips from `[ ]` to `[x]`.
+    # Skip on fork - Nix not used in AvonS/hermes-agent
     if: |
-      github.event_name == 'workflow_dispatch' ||
+      github.repository == 'NousResearch/hermes-agent' &&
+      (github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'issue_comment'
        && github.event.issue.pull_request != null
        && contains(github.event.comment.body, '[x] **Apply lockfile fix**')
-       && !contains(github.event.changes.body.from, '[x] **Apply lockfile fix**'))
+       && !contains(github.event.changes.body.from, '[x] **Apply lockfile fix**')))
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

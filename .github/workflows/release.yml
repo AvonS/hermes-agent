@@ -115,23 +115,8 @@ jobs:
           if [ -z "$NOTES" ]; then
             NOTES="Release $VERSION"
           fi
-          
-          # Append security notes if SECURITY-DEPS.md has updates
-          if [ -f "SECURITY-DEPS.md" ]; then
-            NOTES="$NOTES
 
-## Security
-
-This release includes security fixes from CodeQL:
-- Lodash updated to ^4.18.1 (patch updates)
-- Protobufjs updated to 7.5.5
-- SSL downgrade prevention (MITM protection)
-- CodeQL weekly-only scan (reduced noise)"
-          fi
-          
           gh release create "$VERSION" --title "Release $VERSION" --notes "$NOTES"
-          
-          echo "Created release: $VERSION"
 
       - name: Write .fork-version file
         run: |
