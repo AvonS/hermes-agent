@@ -281,7 +281,7 @@ class TestAgentSwitchModelDefenseInDepth:
         class _Sentinel(Exception):
             pass
 
-        def _raise_after_capture(api_key, base_url):
+        def _raise_after_capture(api_key, base_url, timeout=None):
             captured["api_key"] = api_key
             captured["base_url"] = base_url
             raise _Sentinel("strip verified")

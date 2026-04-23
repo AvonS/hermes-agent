@@ -1909,7 +1909,7 @@ class AIAgent:
         # tests) can't reintroduce the double-/v1 404 bug.
         if (
             api_mode == "anthropic_messages"
-            and new_provider in ("opencode-zen", "opencode-go")
+            and new_provider in ("opencode-zen", "opencode-go", "opencode")
             and isinstance(base_url, str)
             and base_url
         ):
