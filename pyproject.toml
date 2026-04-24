@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hermes-agent"
-version = "0.10.0"
+version = "0.11.0"
 description = "The self-improving AI agent — creates skills from experience, improves them during use, and runs anywhere"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -134,3 +134,28 @@ markers = [
     "integration: marks tests requiring external services (API keys, Modal, etc.)",
 ]
 addopts = "-m 'not integration' -n auto"
+
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.ty.rules]
+unknown-argument = "warn"
+redundant-cast = "ignore"
+
+[tool.ty.src]
+exclude = ["**"]
+
+[[tool.ty.overrides]]
+include = ["**"]
+
+[tool.ty.overrides.rules]
+unresolved-import = "ignore"
+invalid-method-override = "ignore"
+invalid-assignment = "ignore"
+not-iterable = "ignore"
+
+[tool.ruff]
+exclude = ["*"]
+
+[tool.uv]
+exclude-newer = "7 days"
