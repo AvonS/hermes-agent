@@ -68,6 +68,29 @@ def feature_finish():
         print("Cancelled.")
 
 
+def _run_fork_deps_patch():
+    """Apply fork-specific dependency patches after sync.
+    
+    Addresses the "Dependabot reversion" issue: upstream's pyproject.toml/uv.lock
+    can revert security fixes during sync. This script applies minimum version
+    constraints AFTER merge to ensure fixes persist.
+    """
+    patch_script = Path(__file__).parent / "fork_deps_patch.py"
+    if patch_script.exists():
+        print("\nApplying fork dependency patches...")
+        result = subprocess.run(
+            [sys.executable, str(patch_script), "--verbose"],
+            capture_output=True, text=True
+        )
+        print(result.stdout)
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        if result.returncode != 0:
+            print(f"⚠ fork_deps_patch exited with {result.returncode}", file=sys.stderr)
+    else:
+        print(f"\n⚠ {patch_script} not found - skipping dependency patch")
+
+
 def sync():
     """Sync from upstream/main to dev."""
     print("Syncing upstream/main → dev...")
@@ -75,12 +98,14 @@ def sync():
     run("git fetch upstream main")
     result = run("git merge upstream/main", check=False)
     if result.returncode == 0:
+        _run_fork_deps_patch()
         run("git push origin dev")
-        print("✓ Synced upstream/main → dev")
+        print("\n✓ Synced upstream/main → dev")
     else:
-        print("⚠ Merge conflicts - resolve manually")
+        print("\n⚠ Merge conflicts - resolve manually")
         print("  After resolving: git add . && git commit")
-        print("  Then: git push origin dev")
+        print("  Then: python scripts/fork_deps_patch.py --verbose")
+        print("  And: git push origin dev")
 
 
 def release():
