@@ -17,6 +17,7 @@ from typing import Any, Optional
 
 from hermes_constants import get_hermes_home
 from hermes_cli.env_loader import load_hermes_dotenv
+from utils import is_truthy_value
 from tui_gateway.transport import (
     StdioTransport,
     Transport,
@@ -125,9 +126,11 @@ _cfg_lock = threading.Lock()
 _cfg_cache: dict | None = None
 _cfg_mtime: float | None = None
 _cfg_path = None
-_SLASH_WORKER_TIMEOUT_S = max(
-    5.0, float(os.environ.get("HERMES_TUI_SLASH_TIMEOUT_S", "45") or 45)
-)
+try:
+    _slash_timeout = float(os.environ.get("HERMES_TUI_SLASH_TIMEOUT_S") or "45")
+except (ValueError, TypeError):
+    _slash_timeout = 45.0
+_SLASH_WORKER_TIMEOUT_S = max(5.0, _slash_timeout)
 _DETAIL_SECTION_NAMES = ("thinking", "tools", "subagents", "activity")
 _DETAIL_MODES = frozenset({"hidden", "collapsed", "expanded"})
 
@@ -153,8 +156,12 @@ _LONG_HANDLERS = frozenset(
     }
 )
 
+try:
+    _rpc_pool_workers = max(2, int(os.environ.get("HERMES_TUI_RPC_POOL_WORKERS") or "4"))
+except (ValueError, TypeError):
+    _rpc_pool_workers = 4
 _pool = concurrent.futures.ThreadPoolExecutor(
-    max_workers=max(2, int(os.environ.get("HERMES_TUI_RPC_POOL_WORKERS", "4") or 4)),
+    max_workers=_rpc_pool_workers,
     thread_name_prefix="tui-rpc",
 )
 atexit.register(lambda: _pool.shutdown(wait=False, cancel_futures=True))
@@ -417,11 +424,35 @@ def method(name: str):
     return dec
 
 
+def _normalize_request(req: Any) -> tuple[Any, str, dict] | dict:
+    """Validate a JSON-RPC request enough for safe local dispatch."""
+    if not isinstance(req, dict):
+        return _err(None, -32600, "invalid request: expected an object")
+
+    rid = req.get("id")
+    method = req.get("method")
+    if not isinstance(method, str) or not method:
+        return _err(rid, -32600, "invalid request: method must be a non-empty string")
+
+    params = req.get("params", {})
+    if params is None:
+        params = {}
+    elif not isinstance(params, dict):
+        return _err(rid, -32602, "invalid params: expected an object")
+
+    return rid, method, params
+
+
 def handle_request(req: dict) -> dict | None:
-    fn = _methods.get(req.get("method", ""))
+    normalized = _normalize_request(req)
+    if isinstance(normalized, dict):
+        return normalized
+
+    rid, method, params = normalized
+    fn = _methods.get(method)
     if not fn:
-        return _err(req.get("id"), -32601, f"unknown method: {req.get('method')}")
-    return fn(req.get("id"), req.get("params", {}))
+        return _err(rid, -32601, f"unknown method: {method}")
+    return fn(rid, params)
 
 
 def dispatch(req: dict, transport: Optional[Transport] = None) -> dict | None:
@@ -439,7 +470,12 @@ def dispatch(req: dict, transport: Optional[Transport] = None) -> dict | None:
     t = transport or _stdio_transport
     token = bind_transport(t)
     try:
-        if req.get("method") not in _LONG_HANDLERS:
+        normalized = _normalize_request(req)
+        if isinstance(normalized, dict):
+            return normalized
+
+        _rid, method, _params = normalized
+        if method not in _LONG_HANDLERS:
             return handle_request(req)
 
         # Snapshot the context so the pool worker sees the bound transport.
@@ -1670,6 +1706,11 @@ def _apply_personality_to_session(
         return False, None
 
 
+def _cfg_max_turns(cfg: dict, default: int) -> int:
+    agent_cfg = cfg.get("agent") or {}
+    return int(agent_cfg.get("max_turns") or cfg.get("max_turns") or default)
+
+
 def _background_agent_kwargs(agent, task_id: str) -> dict:
     cfg = _load_cfg()
 
@@ -1681,7 +1722,7 @@ def _background_agent_kwargs(agent, task_id: str) -> dict:
         "acp_command": getattr(agent, "acp_command", None) or None,
         "acp_args": getattr(agent, "acp_args", None) or None,
         "model": getattr(agent, "model", None) or _resolve_model(),
-        "max_iterations": int(cfg.get("max_turns", 25) or 25),
+        "max_iterations": _cfg_max_turns(cfg, 25),
         "enabled_toolsets": getattr(agent, "enabled_toolsets", None)
         or _load_enabled_toolsets(),
         "quiet_mode": True,
@@ -1737,7 +1778,8 @@ def _make_agent(sid: str, key: str, session_id: str | None = None):
     from hermes_cli.runtime_provider import resolve_runtime_provider
 
     cfg = _load_cfg()
-    system_prompt = ((cfg.get("agent") or {}).get("system_prompt", "") or "").strip()
+    agent_cfg = cfg.get("agent") or {}
+    system_prompt = (agent_cfg.get("system_prompt", "") or "").strip()
     model, requested_provider = _resolve_startup_runtime()
     runtime = resolve_runtime_provider(
         requested=requested_provider,
@@ -1745,6 +1787,7 @@ def _make_agent(sid: str, key: str, session_id: str | None = None):
     )
     return AIAgent(
         model=model,
+        max_iterations=_cfg_max_turns(cfg, 90),
         provider=runtime.get("provider"),
         base_url=runtime.get("base_url"),
         api_key=runtime.get("api_key"),
@@ -1798,6 +1841,21 @@ def _init_session(sid: str, key: str, agent, history: list, cols: int = 80):
         register_gateway_notify(key, lambda data: _emit("approval.request", sid, data))
         load_permanent_allowlist()
     except Exception:
+        pass
+    # Surface the self-improvement background review's "💾 …" summary as a
+    # review.summary event so Ink can render it as a persistent system line
+    # in the transcript. In the CLI path this message is printed via
+    # prompt_toolkit; the TUI has no equivalent print surface, so without
+    # this callback the review would write the skill/memory change silently.
+    try:
+        agent.background_review_callback = (
+            lambda message, _sid=sid: _emit(
+                "review.summary", _sid, {"text": str(message)}
+            )
+        )
+    except Exception:
+        # Bare AIAgents that don't expose the attribute (unlikely, but keep
+        # session startup resilient).
         pass
     _wire_callbacks(sid)
     _notify_session_boundary("on_session_reset", key)
@@ -2777,6 +2835,7 @@ def _run_prompt_submit(rid, sid: str, session: dict, text: Any) -> None:
                     base_url=getattr(agent, "base_url", "") or "",
                     api_key=getattr(agent, "api_key", "") or "",
                     provider=getattr(agent, "provider", "") or "",
+                    config_context_length=getattr(agent, "_config_context_length", None),
                 )
                 ctx = preprocess_context_references(
                     prompt,
@@ -3363,7 +3422,7 @@ def _(rid, params: dict) -> dict:
                     enable_session_yolo(session["session_key"])
                     nv = "1"
             else:
-                current = bool(os.environ.get("HERMES_YOLO_MODE"))
+                current = is_truthy_value(os.environ.get("HERMES_YOLO_MODE"))
                 if current:
                     os.environ.pop("HERMES_YOLO_MODE", None)
                     nv = "0"
@@ -3744,6 +3803,40 @@ def _(rid, params: dict) -> dict:
 def _(rid, params: dict) -> dict:
     session = _sessions.get(params.get("session_id", ""))
     try:
+        # Gate: /reload-mcp invalidates the prompt cache for this session.
+        # Respect the ``approvals.mcp_reload_confirm`` config toggle — if
+        # set (default true) AND the caller did not pass ``confirm=true``
+        # in params, surface a warning to the transcript instead of just
+        # reloading silently.  Users pass confirm=true either by
+        # re-invoking after reading the warning, or by setting the
+        # config key to false permanently.
+        user_confirm = bool(params.get("confirm", False))
+        if not user_confirm:
+            try:
+                from hermes_cli.config import load_config as _load_config
+                _cfg = _load_config()
+                _approvals = _cfg.get("approvals") if isinstance(_cfg, dict) else None
+                _confirm_required = True
+                if isinstance(_approvals, dict):
+                    _confirm_required = bool(_approvals.get("mcp_reload_confirm", True))
+            except Exception:
+                _confirm_required = True
+            if _confirm_required:
+                # Return a structured response the Ink client can surface
+                # as a warning/confirmation without actually reloading yet.
+                # Ink's ops.ts reads ``status`` and prints ``message`` to
+                # the transcript; a follow-up invocation with confirm=true
+                # (or an `always` choice that flips the config) proceeds.
+                return _ok(rid, {
+                    "status": "confirm_required",
+                    "message": (
+                        "⚠️  /reload-mcp invalidates the prompt cache (next "
+                        "message re-sends full input tokens). Reply `/reload-mcp "
+                        "now` to proceed, or `/reload-mcp always` to proceed and "
+                        "silence this prompt permanently."
+                    ),
+                })
+
         from tools.mcp_tool import shutdown_mcp_servers, discover_mcp_tools
 
         shutdown_mcp_servers()
@@ -3753,6 +3846,15 @@ def _(rid, params: dict) -> dict:
             if hasattr(agent, "refresh_tools"):
                 agent.refresh_tools()
             _emit("session.info", params.get("session_id", ""), _session_info(agent))
+
+        # Honor `always=true` by persisting the opt-out to config.
+        if bool(params.get("always", False)):
+            try:
+                from cli import save_config_value as _save_cfg
+                _save_cfg("approvals.mcp_reload_confirm", False)
+            except Exception as _exc:
+                logger.warning("Failed to persist mcp_reload_confirm=false: %s", _exc)
+
         return _ok(rid, {"status": "reloaded"})
     except Exception as e:
         return _err(rid, 5015, str(e))
@@ -4020,11 +4122,15 @@ def _(rid, params: dict) -> dict:
             return _ok(rid, {"type": "alias", "target": qc.get("target", "")})
 
     try:
-        from hermes_cli.plugins import get_plugin_command_handler
+        from hermes_cli.plugins import (
+            get_plugin_command_handler,
+            resolve_plugin_command_result,
+        )
 
         handler = get_plugin_command_handler(name)
         if handler:
-            return _ok(rid, {"type": "plugin", "output": str(handler(arg) or "")})
+            result = resolve_plugin_command_result(handler(arg))
+            return _ok(rid, {"type": "plugin", "output": str(result or "")})
     except Exception:
         pass
 
@@ -5350,7 +5456,7 @@ def _(rid, params: dict) -> dict:
             {
                 "title": "Agent",
                 "rows": [
-                    ["Max Turns", str(cfg.get("max_turns", 25))],
+                    ["Max Turns", str(_cfg_max_turns(cfg, 90))],
                     ["Toolsets", ", ".join(cfg.get("enabled_toolsets", [])) or "all"],
                     ["Verbose", str(cfg.get("verbose", False))],
                 ],
