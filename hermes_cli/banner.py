@@ -5,6 +5,7 @@ Pure display functions with no HermesCLI state dependency.
 
 import json
 import logging
+import re
 import shutil
 import subprocess
 import threading
@@ -388,7 +389,11 @@ def format_banner_version_label() -> str:
     if FORK_VERSION_ENABLED:
         installed_version = get_installed_version()
         if installed_version:
-            base = f"Hermes Agent v{installed_version} ({RELEASE_DATE})"
+            # Add space before git describe suffix (-N-gHASH) for readability
+            version = installed_version
+            if "-avons." in version and re.search(r"-avons\.\d+\.\d+-\d+-g[0-9a-f]{7,}", version):
+                version = re.sub(r"(-avons\.\d+\.\d+)(-)", r"\1 \2", version)
+            base = f"Hermes Agent v{version} ({RELEASE_DATE})"
             state = get_git_banner_state()
             if not state:
                 return base
