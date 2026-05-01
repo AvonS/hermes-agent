@@ -2396,6 +2396,7 @@ class HermesCLI:
             "model_name": model_name,
             "model_short": model_short,
             "duration": format_duration_compact(elapsed_seconds),
+            "git_branch": self._get_git_branch(),
             "prompt_elapsed": self._format_prompt_elapsed(
                 getattr(self, "_prompt_start_time", None),
                 getattr(self, "_prompt_duration", 0.0),
@@ -2438,6 +2439,37 @@ class HermesCLI:
                 snapshot["context_percent"] = max(0, min(100, round((context_tokens / context_length) * 100)))
 
         return snapshot
+
+    def _get_git_branch(self) -> str:
+        """Get the current git branch from hermes-agent repo."""
+        import subprocess
+        from pathlib import Path
+        from hermes_constants import get_hermes_home
+
+        hermes_home = getattr(self, "_hermes_home", None) or str(get_hermes_home())
+        repo = Path(hermes_home) / "hermes-agent"
+        if not (repo / ".git").exists():
+            return ""
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                capture_output=True, text=True, cwd=repo, timeout=2
+            )
+            if result.returncode == 0:
+                branch = result.stdout.strip()
+                if branch == "HEAD":
+                    # Detached HEAD - show commit hash short
+                    result = subprocess.run(
+                        ["git", "rev-parse", "--short", "HEAD"],
+                        capture_output=True, text=True, cwd=repo, timeout=2
+                    )
+                    if result.returncode == 0:
+                        short_hash = result.stdout.strip()[:7]
+                        return f"(detached-{short_hash})"
+                return branch
+        except Exception:
+            pass
+        return ""
 
     @staticmethod
     def _status_bar_display_width(text: str) -> int:
@@ -2610,9 +2642,12 @@ class HermesCLI:
             # line and produce duplicated status bar rows over long sessions.
             width = self._get_tui_terminal_width()
             duration_label = snapshot["duration"]
+            branch_label = snapshot.get("git_branch") or "dev"
 
             if width < 52:
                 frags = [
+                    ("class:status-bar", branch_label),
+                    ("class:status-bar-dim", " │ "),
                     ("class:status-bar", " ⚕ "),
                     ("class:status-bar-strong", snapshot["model_short"]),
                     ("class:status-bar-dim", " · "),
@@ -2624,6 +2659,8 @@ class HermesCLI:
                 percent_label = f"{percent}%" if percent is not None else "--"
                 if width < 76:
                     frags = [
+                        ("class:status-bar", branch_label),
+                        ("class:status-bar-dim", " │ "),
                         ("class:status-bar", " ⚕ "),
                         ("class:status-bar-strong", snapshot["model_short"]),
                         ("class:status-bar-dim", " · "),
@@ -2642,6 +2679,8 @@ class HermesCLI:
 
                     bar_style = self._status_bar_context_style(percent)
                     frags = [
+                        ("class:status-bar", branch_label),
+                        ("class:status-bar-dim", " │ "),
                         ("class:status-bar", " ⚕ "),
                         ("class:status-bar-strong", snapshot["model_short"]),
                         ("class:status-bar-dim", " │ "),
