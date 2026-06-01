@@ -15,11 +15,11 @@ def test_openrouter_free_models_augmentation():
         "openai/gpt-4": {"input": 0.03, "output": 0.06},
     }
 
-    with patch("hermes_cli.main.model_ids", return_value=base_models), \
-         patch("hermes_cli.main.get_pricing_for_provider", return_value=pricing_data), \
-         patch("hermes_cli.main._prompt_model_selection", return_value=None) as mock_prompt, \
-         patch("hermes_cli.main._save_model_choice"), \
-         patch("hermes_cli.main.deactivate_provider"), \
+    with patch("hermes_cli.models.model_ids", return_value=base_models), \
+         patch("hermes_cli.models.get_pricing_for_provider", return_value=pricing_data), \
+         patch("hermes_cli.auth._prompt_model_selection", return_value=None) as mock_prompt, \
+         patch("hermes_cli.auth._save_model_choice"), \
+         patch("hermes_cli.auth.deactivate_provider"), \
          patch("hermes_cli.config.load_config", return_value={}), \
          patch("hermes_cli.config.save_config"):
         _model_flow_openrouter({}, current_model="")
