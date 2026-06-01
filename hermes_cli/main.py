@@ -2306,6 +2306,15 @@ def _model_flow_openrouter(config, current_model=""):
     # Fetch live pricing (non-blocking — returns empty dict on failure)
     pricing = get_pricing_for_provider("openrouter", force_refresh=True)
 
+    # Augment with all free models from pricing
+    free_models = [
+        mid for mid, p in pricing.items()
+        if p.get("input", 0) == 0 and p.get("output", 0) == 0
+    ]
+    for mid in free_models:
+        if mid not in openrouter_models:
+            openrouter_models.append(mid)
+
     selected = _prompt_model_selection(
         openrouter_models, current_model=current_model, pricing=pricing
     )
