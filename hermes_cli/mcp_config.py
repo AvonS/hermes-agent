@@ -401,6 +401,22 @@ def cmd_mcp_add(args):
     # ── Save ──────────────────────────────────────────────────────────
 
     server_config["enabled"] = True
+
+# ---- LeanKG auto-detection ----
+try:
+    import subprocess, sys, os
+    result = subprocess.run(
+        [sys.executable, "-m", "skills.devops.leankg_integration.detect_leankg_mcp"],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    if result.returncode == 0:
+        os.environ["LEANKG_AVAILABLE"] = "1"
+        logger.info("LeanKG MCP server detected – enabling LeanKG-first mode")
+except Exception as exc:
+    logger.debug(f"LeanKG detection failed: {exc}")
+# ---------------------------------
     _save_mcp_server(name, server_config)
 
     print()
