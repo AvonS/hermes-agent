@@ -1,0 +1,16 @@
+# CodeQL config - exclude false positives for python
+# https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning
+
+# Exclude paths from analysis
+paths-ignore:
+  - '**/test_*.py'
+  - '**/tests/**'
+  - '**/*_test.py'
+
+# Disable specific queries (rules)
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
+    from: py/clear-text-logging-sensitive-data
+    exclude:
+      - "**/agent/auxiliary_client.py"

@@ -5,6 +5,7 @@ Pure display functions with no HermesCLI state dependency.
 
 import json
 import logging
+import re
 import shutil
 import subprocess
 import threading
@@ -122,6 +123,122 @@ def get_available_skills() -> Dict[str, List[str]]:
 # Cache update check results for 6 hours to avoid repeated git fetches
 _UPDATE_CHECK_CACHE_SECONDS = 6 * 3600
 
+# Fork repository info
+_FORK_OWNER = "AvonS"
+_FORK_REPO = "hermes-agent"
+
+# Fork feature flag - set to False to disable fork-specific behavior
+FORK_VERSION_ENABLED = True
+
+
+def get_installed_version() -> Optional[str]:
+    """Get the installed release version.
+    
+    Reads from .fork-version first (survives upstream sync), then
+    falls back to .update_check cache, then git describe.
+    
+    When detected via git describe on a release tag, auto-creates
+    .fork-version for persistence across syncs.
+    """
+    hermes_home = get_hermes_home()
+    
+    # 1. Check .fork-version (survives upstream sync)
+    fork_version_file = hermes_home / ".fork-version"
+    if fork_version_file.exists():
+        try:
+            data = json.loads(fork_version_file.read_text())
+            version = data.get("installed_version")
+            if version:
+                return version
+        except Exception:
+            pass
+    
+    # 2. Fall back to .update_check cache (may be reset during upstream sync)
+    cache_file = hermes_home / ".update_check"
+    if cache_file.exists():
+        try:
+            cached = json.loads(cache_file.read_text())
+            version = cached.get("installed_version")
+            if version:
+                return version
+        except Exception:
+            pass
+    
+    # 3. Fallback: check git describe (exact tag match for fork release tags)
+    # When found, auto-create .fork-version for persistence
+    repo_dir = hermes_home / "hermes-agent"
+    if not (repo_dir / ".git").exists():
+        repo_dir = Path(__file__).parent.parent.resolve()
+    if not (repo_dir / ".git").exists():
+        return None
+
+    try:
+        result = subprocess.run(
+            ["git", "describe", "--tags", "--exact-match"],
+            capture_output=True, text=True, timeout=5,
+            cwd=str(repo_dir),
+        )
+        if result.returncode == 0:
+            tag = result.stdout.strip()
+            # Only return if it's a fork version tag
+            if "-avons." in tag:
+                # Auto-create .fork-version for persistence across syncs
+                try:
+                    import time
+                    fork_version_file.write_text(json.dumps({
+                        "installed_version": tag,
+                        "installed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "source": "git-describe-auto"
+                    }, indent=2))
+                except Exception:
+                    pass  # Don't fail if we can't write
+                return tag
+    except Exception:
+        pass
+
+    return None
+
+
+def _parse_fork_version(version: str) -> Optional[tuple]:
+    """Parse fork version like 0.10.0-avons.1.0 into tuple for sorting."""
+    import re
+    match = re.match(r'(\d+)\.(\d+)\.(\d+)-avons\.(\d+)\.(\d+)', version)
+    if match:
+        return tuple(int(x) for x in match.groups())
+    return None
+
+
+def fetch_latest_fork_version() -> Optional[str]:
+    """Fetch latest release tag from AvonS/hermes-agent GitHub.
+
+    Uses GitHub API to get tags, finds highest semver-compatible tag
+    with -avons. suffix.
+    """
+    import urllib.request
+    import urllib.error
+
+    url = f"https://api.github.com/repos/{_FORK_OWNER}/{_FORK_REPO}/tags"
+    try:
+        req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read().decode())
+
+        fork_versions = []
+        for tag in data:
+            tag_name = tag.get("name", "")
+            if "-avons." in tag_name:
+                parsed = _parse_fork_version(tag_name)
+                if parsed:
+                    fork_versions.append((parsed, tag_name))
+
+        if fork_versions:
+            fork_versions.sort(key=lambda x: x[0])
+            return fork_versions[-1][1]
+    except Exception:
+        pass
+
+    return None
+
 
 def check_for_updates() -> Optional[int]:
     """Check how many commits behind origin/main the local repo is.
@@ -129,6 +246,8 @@ def check_for_updates() -> Optional[int]:
     Does a ``git fetch`` at most once every 6 hours (cached to
     ``~/.hermes/.update_check``).  Returns the number of commits behind,
     or ``None`` if the check fails or isn't applicable.
+
+    Also checks for fork version updates if installed from a release.
     """
     hermes_home = get_hermes_home()
     repo_dir = hermes_home / "hermes-agent"
@@ -142,6 +261,7 @@ def check_for_updates() -> Optional[int]:
 
     # Read cache
     now = time.time()
+    cached = {}
     try:
         if cache_file.exists():
             cached = json.loads(cache_file.read_text())
@@ -161,6 +281,7 @@ def check_for_updates() -> Optional[int]:
         pass  # Offline or timeout — use stale refs, that's fine
 
     # Count commits behind
+    behind = None
     try:
         result = subprocess.run(
             ["git", "rev-list", "--count", "HEAD..origin/main"],
@@ -169,14 +290,38 @@ def check_for_updates() -> Optional[int]:
         )
         if result.returncode == 0:
             behind = int(result.stdout.strip())
-        else:
-            behind = None
     except Exception:
-        behind = None
+        pass
+
+    # Check for fork version updates
+    installed_version = get_installed_version()
+    latest_version = None
+
+    # Check cached latest version first
+    if cached.get("latest_version") and cached.get("latest_version_checked_at"):
+        cache_age = now - time.mktime(time.strptime(
+            cached["latest_version_checked_at"], "%Y-%m-%dT%H:%M:%SZ"))
+        if cache_age < _UPDATE_CHECK_CACHE_SECONDS:
+            latest_version = cached.get("latest_version")
+
+    # Fetch latest if not cached or stale
+    if not latest_version:
+        latest_version = fetch_latest_fork_version()
+
+    # Build cache with extended fields
+    cache_data = {
+        "ts": now,
+        "behind": behind,
+    }
+    if installed_version:
+        cache_data["installed_version"] = installed_version
+    if latest_version:
+        cache_data["latest_version"] = latest_version
+        cache_data["latest_version_checked_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now))
 
     # Write cache
     try:
-        cache_file.write_text(json.dumps({"ts": now, "behind": behind}))
+        cache_file.write_text(json.dumps(cache_data))
     except Exception:
         pass
 
@@ -240,6 +385,30 @@ def get_git_banner_state(repo_dir: Optional[Path] = None) -> Optional[dict]:
 
 def format_banner_version_label() -> str:
     """Return the version label shown in the startup banner title."""
+    # Fork-specific behavior: show fork version when enabled and available
+    if FORK_VERSION_ENABLED:
+        installed_version = get_installed_version()
+        if installed_version:
+            # Add space before git describe suffix (-N-gHASH) for readability
+            version = installed_version
+            if "-avons." in version and re.search(r"-avons\.\d+\.\d+-\d+-g[0-9a-f]{7,}", version):
+                version = re.sub(r"(-avons\.\d+\.\d+)(-)", r"\1 \2", version)
+            base = f"Hermes Agent v{version} ({RELEASE_DATE})"
+            state = get_git_banner_state()
+            if not state:
+                return base
+            
+            upstream = state["upstream"]
+            local = state["local"]
+            ahead = int(state.get("ahead") or 0)
+            
+            if ahead <= 0 or upstream == local:
+                return f"{base} · upstream {upstream}"
+            
+            carried_word = "commit" if ahead == 1 else "commits"
+            return f"{base} · upstream {upstream} · local {local} (+{ahead} carried {carried_word})"
+    
+    # Upstream default behavior
     base = f"Hermes Agent v{VERSION} ({RELEASE_DATE})"
     state = get_git_banner_state()
     if not state:

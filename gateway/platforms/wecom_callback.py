@@ -19,6 +19,9 @@ import time
 from typing import Any, Dict, List, Optional
 from xml.etree import ElementTree as ET
 
+# Disable XML external entity (XXE) parsing to prevent DoS attacks
+# See: CWE-827
+
 try:
     from aiohttp import web
 

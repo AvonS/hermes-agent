@@ -1,2 +1,9 @@
 # Auto-generated files — collapse diffs and exclude from language stats
 web/package-lock.json linguist-generated=true
+
+# Fork-managed lockfiles — binary merge driver prevents silent reversion
+# During hg sync, upstream changes to these files show as conflicts (not auto-merged).
+# Resolve by running: uv lock --upgrade <package>  or  uv sync
+# See: specs/Build-Archive/000-05-security-fix-queue.md
+uv.lock binary
+package-lock.json binary

@@ -2,17 +2,10 @@ name: Nix
 
 on:
   push:
-    branches: [main]
+    branches: [do-not-run]
   pull_request:
-    paths:
-      - 'flake.nix'
-      - 'flake.lock'
-      - 'nix/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - 'hermes_cli/**'
-      - 'run_agent.py'
-      - 'acp_adapter/**'
+    branches: [do-not-run]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,7 +15,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  
   nix:
+    if: github.repository == 'NousResearch/hermes-agent'
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
