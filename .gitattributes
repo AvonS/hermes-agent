@@ -1,9 +1,10 @@
 # Auto-generated files — collapse diffs and exclude from language stats
 web/package-lock.json linguist-generated=true
 
-# Fork-managed lockfiles — binary merge driver prevents silent reversion
-# During hg sync, upstream changes to these files show as conflicts (not auto-merged).
-# Resolve by running: uv lock --upgrade <package>  or  uv sync
-# See: specs/Build-Archive/000-05-security-fix-queue.md
-uv.lock binary
-package-lock.json binary
+# Enforce LF for scripts that run inside Linux containers.
+# Without this, Windows checkout converts to CRLF and breaks `exec` in the
+# container entrypoint with "no such file or directory".
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.dockerfile text eol=lf
+docker/entrypoint.sh text eol=lf
